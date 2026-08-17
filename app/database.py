@@ -1,12 +1,19 @@
 import json
 import random
 import hashlib
+import os
+import tempfile
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.models import Base, AdminUser, User, Listing, TrafficMetric
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./maklersiz_admin.db"
+if os.environ.get("VERCEL") or not os.access(".", os.W_OK):
+    db_path = os.path.join(tempfile.gettempdir(), "maklersiz_admin.db")
+else:
+    db_path = "./maklersiz_admin.db"
+
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{db_path}"
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
