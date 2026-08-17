@@ -902,11 +902,11 @@
 
                 cachedListingsList = Array.isArray(data) ? data : (data?.listings || data?.data || []);
                 
-                // Refresh current active view with real data
+                // Refresh users and stats with real data
+                await loadUsers(true);
                 loadDashboardStats();
                 loadAiBlockedListings();
                 if (currentTab === 'listings') loadAllListings();
-                if (currentTab === 'users') loadUsers();
             } catch (err) {
                 console.error("fetchListings error:", err);
             }
@@ -936,21 +936,40 @@
             const blockedListings = listings.filter(l => getStatus(l) === 'REJECTED').length;
             const underReviewListings = listings.filter(l => getStatus(l) === 'UNDER_REVIEW').length;
 
-            // Extract unique owners from real listings
-            const ownersSet = new Set();
-            listings.forEach(l => {
-                const oName = getOwnerName(l);
-                if (oName && oName !== 'Uy Egasi') ownersSet.add(oName);
-            });
-            const totalOwners = ownersSet.size;
-            const activeOwners = listings.filter(l => getStatus(l) === 'APPROVED').reduce((acc, l) => {
-                const name = getOwnerName(l);
-                if (name && name !== 'Uy Egasi') acc.add(name);
-                return acc;
-            }, new Set()).size;
+            // Calculate real owners & students directly from cachedUsersList
+            let totalOwners = 0;
+            let activeOwners = 0;
+            let totalStudents = 0;
+            let activeStudents = 0;
 
-            const totalStudents = Math.round(totalOwners * 1.5);
-            const activeStudents = Math.round(activeOwners * 1.2);
+            if (cachedUsersList && cachedUsersList.length > 0) {
+                cachedUsersList.forEach(u => {
+                    const uRole = (u.role || '').toUpperCase();
+                    const isActive = (u.status || 'ACTIVE').toUpperCase() === 'ACTIVE';
+                    if (uRole === 'OWNER') {
+                        totalOwners++;
+                        if (isActive) activeOwners++;
+                    } else if (uRole === 'STUDENT') {
+                        totalStudents++;
+                        if (isActive) activeStudents++;
+                    }
+                });
+            } else {
+                // Fallback to listings extraction if users list pending
+                const ownersSet = new Set();
+                listings.forEach(l => {
+                    const oName = getOwnerName(l);
+                    if (oName && oName !== 'Uy Egasi') ownersSet.add(oName);
+                });
+                totalOwners = ownersSet.size;
+                activeOwners = listings.filter(l => getStatus(l) === 'APPROVED').reduce((acc, l) => {
+                    const name = getOwnerName(l);
+                    if (name && name !== 'Uy Egasi') acc.add(name);
+                    return acc;
+                }, new Set()).size;
+                totalStudents = Math.round(totalOwners * 1.5);
+                activeStudents = Math.round(activeOwners * 1.2);
+            }
 
             const aiAutoApproved = listings.filter(l => getStatus(l) === 'APPROVED' && getRiskScore(l) < 30).length;
             const aiRejectedCount = blockedListings;
