@@ -882,22 +882,22 @@
         async function fetchListings() {
             try {
                 let data = null;
-                // 1. Try fetching from Railway API_BASE_URL/listings
+                // 1. Fetch from direct server API endpoint first (CORS error free)
                 try {
-                    const res = await fetch(`${API_BASE_URL}/listings`, { headers: getAuthHeaders() });
-                    if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
-                        data = await res.json();
-                    }
-                } catch (e) {
-                    console.warn("Railway API fetch error, trying local server endpoint:", e);
-                }
-
-                // 2. Fallback to local server API endpoints if Railway returns non-json HTML or offline
-                if (!data || !Array.isArray(data)) {
                     const resLocal = await fetch(`${API_BASE}/api/v1/listings`, { headers: getAuthHeaders() });
-                    if (resLocal.ok) {
+                    if (resLocal.ok && resLocal.headers.get('content-type')?.includes('application/json')) {
                         data = await resLocal.json();
                     }
+                } catch (e) {}
+
+                // 2. Secondary fallback to external Railway domain if needed
+                if (!data || !Array.isArray(data)) {
+                    try {
+                        const res = await fetch(`${API_BASE_URL}/listings`, { headers: getAuthHeaders() });
+                        if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
+                            data = await res.json();
+                        }
+                    } catch (e) {}
                 }
 
                 cachedListingsList = Array.isArray(data) ? data : (data?.listings || data?.data || []);
@@ -1247,7 +1247,7 @@
             }
         }
 
-        // 3. USERS DIRECTORY (GET https://maklersizkvartira-production.up.railway.app/api/v1/users)
+        // 3. USERS DIRECTORY (GET /api/v1/users)
         async function loadUsers(silent = false) {
             const tbody = document.getElementById('usersTableBody');
             if (!silent) {
@@ -1260,24 +1260,24 @@
             try {
                 let users = [];
 
-                // 1. Fetch from Railway API GET /users (Handles { status: "success", data: [...] } or array)
+                // 1. Fetch from direct server API endpoint first (CORS error free)
                 try {
-                    const res = await fetch(`${API_BASE_URL}/users`, { headers: getAuthHeaders() });
-                    if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
-                        const json = await res.json();
-                        users = Array.isArray(json) ? json : (json.data || json.users || []);
-                    }
-                } catch (e) {
-                    console.warn("Railway /users API error, trying local server:", e);
-                }
-
-                // 2. Fallback to local server API GET /api/v1/users if Railway is offline or SPA
-                if (!users || users.length === 0) {
                     const resLocal = await fetch(`${API_BASE}/api/v1/users?role=${role}&search=${encodeURIComponent(search)}`, { headers: getAuthHeaders() });
-                    if (resLocal.ok) {
+                    if (resLocal.ok && resLocal.headers.get('content-type')?.includes('application/json')) {
                         const jsonLocal = await resLocal.json();
                         users = Array.isArray(jsonLocal) ? jsonLocal : (jsonLocal.data || jsonLocal.users || []);
                     }
+                } catch (e) {}
+
+                // 2. Secondary fallback to Railway domain if needed
+                if (!users || users.length === 0) {
+                    try {
+                        const res = await fetch(`${API_BASE_URL}/users`, { headers: getAuthHeaders() });
+                        if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
+                            const json = await res.json();
+                            users = Array.isArray(json) ? json : (json.data || json.users || []);
+                        }
+                    } catch (e) {}
                 }
 
                 // Filter by role & search query locally if needed
