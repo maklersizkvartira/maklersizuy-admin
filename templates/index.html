@@ -787,6 +787,15 @@
             }, 1000);
         }
 
+        let autoRefreshInterval = null;
+        function startAutoRefresh() {
+            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+            autoRefreshInterval = setInterval(async () => {
+                await fetchListings();
+                await loadUsers(true);
+            }, 5000);
+        }
+
         // Authentication Handlers
         async function checkAuth() {
             try {
@@ -798,6 +807,8 @@
                     document.getElementById('loginModal').classList.add('hidden');
                     document.getElementById('adminNameDisplay').textContent = data.full_name || data.username;
                     await fetchListings();
+                    await loadUsers();
+                    startAutoRefresh();
                 } else {
                     document.getElementById('loginModal').classList.remove('hidden');
                 }
@@ -830,6 +841,8 @@
                     document.getElementById('adminNameDisplay').textContent = data.full_name;
                     showToast("Tizimga muvaffaqiyatli kirdingiz!");
                     await fetchListings();
+                    await loadUsers();
+                    startAutoRefresh();
                 } else {
                     const errData = await res.json();
                     document.getElementById('loginErrorText').textContent = errData.detail || "Login yoki parol xato!";
@@ -1215,10 +1228,12 @@
             }
         }
 
-        // 3. USERS DIRECTORY (Real GET https://maklersizkvartira-production.up.railway.app/api/v1/users)
-        async function loadUsers() {
+        // 3. USERS DIRECTORY (GET https://maklersizkvartira-production.up.railway.app/api/v1/users)
+        async function loadUsers(silent = false) {
             const tbody = document.getElementById('usersTableBody');
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-500"><i class="fa-solid fa-spinner fa-spin text-xl mb-2"></i><p>Yuklanmoqda...</p></td></tr>`;
+            if (!silent) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-500"><i class="fa-solid fa-spinner fa-spin text-xl mb-2"></i><p>Yuklanmoqda...</p></td></tr>`;
+            }
 
             const role = document.getElementById('userRoleFilter').value;
             const search = document.getElementById('userSearchInput').value.toLowerCase();
@@ -1226,12 +1241,12 @@
             try {
                 let users = [];
 
-                // 1. Fetch from Railway API GET /users
+                // 1. Fetch from Railway API GET /users (Handles { status: "success", data: [...] } or array)
                 try {
                     const res = await fetch(`${API_BASE_URL}/users`, { headers: getAuthHeaders() });
                     if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
-                        const data = await res.json();
-                        users = Array.isArray(data) ? data : (data.users || data.data || []);
+                        const json = await res.json();
+                        users = Array.isArray(json) ? json : (json.data || json.users || []);
                     }
                 } catch (e) {
                     console.warn("Railway /users API error, trying local server:", e);
@@ -1241,7 +1256,8 @@
                 if (!users || users.length === 0) {
                     const resLocal = await fetch(`${API_BASE}/api/v1/users?role=${role}&search=${encodeURIComponent(search)}`, { headers: getAuthHeaders() });
                     if (resLocal.ok) {
-                        users = await resLocal.json();
+                        const jsonLocal = await resLocal.json();
+                        users = Array.isArray(jsonLocal) ? jsonLocal : (jsonLocal.data || jsonLocal.users || []);
                     }
                 }
 
@@ -1288,13 +1304,15 @@
                         ? `<img src="${avatarUrl}" class="w-9 h-9 rounded-full object-cover border border-slate-700">`
                         : `<div class="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-white">${name.charAt(0)}</div>`;
 
+                    const listingsCount = u.listings_count !== undefined ? u.listings_count : (u.listingsCount !== undefined ? u.listingsCount : 0);
+
                     return `
                     <tr class="hover:bg-slate-900/40 transition">
                         <td class="px-6 py-4 flex items-center gap-3">
                             ${avatarHtml}
                             <div>
                                 <div class="font-semibold text-white text-sm">${name}</div>
-                                <div class="text-[11px] text-slate-400">${u.listings_count || u.listingsCount || 1} ta e'loni bor</div>
+                                <div class="text-[11px] text-slate-400">${listingsCount} ta e'loni bor</div>
                             </div>
                         </td>
                         <td class="px-6 py-4 font-mono text-slate-300">${phone}</td>
@@ -1321,7 +1339,9 @@
                     </tr>`;
                 }).join('');
             } catch (err) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-rose-400">Yuklashda xatolik.</td></tr>`;
+                if (!silent) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-rose-400">Yuklashda xatolik.</td></tr>`;
+                }
             }
         }
 
