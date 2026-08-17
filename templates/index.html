@@ -1215,7 +1215,7 @@
             }
         }
 
-        // 3. USERS DIRECTORY
+        // 3. USERS DIRECTORY (Real GET https://maklersizkvartira-production.up.railway.app/api/v1/users)
         async function loadUsers() {
             const tbody = document.getElementById('usersTableBody');
             tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-500"><i class="fa-solid fa-spinner fa-spin text-xl mb-2"></i><p>Yuklanmoqda...</p></td></tr>`;
@@ -1224,33 +1224,38 @@
             const search = document.getElementById('userSearchInput').value.toLowerCase();
 
             try {
-                // Extract users from real listings & users API
                 let users = [];
-                const res = await fetch(`${API_BASE}/api/users?role=${role}&search=${encodeURIComponent(search)}`, { headers: getAuthHeaders() });
-                if (res.ok) {
-                    users = await res.json();
+
+                // 1. Fetch from Railway API GET /users
+                try {
+                    const res = await fetch(`${API_BASE_URL}/users`, { headers: getAuthHeaders() });
+                    if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
+                        const data = await res.json();
+                        users = Array.isArray(data) ? data : (data.users || data.data || []);
+                    }
+                } catch (e) {
+                    console.warn("Railway /users API error, trying local server:", e);
                 }
 
+                // 2. Fallback to local server API GET /api/v1/users if Railway is offline or SPA
                 if (!users || users.length === 0) {
-                    // Extract unique owners from cached listings
-                    const map = new Map();
-                    cachedListingsList.forEach(l => {
-                        const phone = getOwnerPhone(l);
-                        if (!map.has(phone)) {
-                            map.set(phone, {
-                                id: l.owner?.id || Math.floor(Math.random() * 1000),
-                                full_name: getOwnerName(l),
-                                phone: phone,
-                                role: 'OWNER',
-                                trust_score: getTrustScore(l),
-                                status: 'ACTIVE',
-                                listings_count: 1
-                            });
-                        } else {
-                            map.get(phone).listings_count++;
-                        }
+                    const resLocal = await fetch(`${API_BASE}/api/v1/users?role=${role}&search=${encodeURIComponent(search)}`, { headers: getAuthHeaders() });
+                    if (resLocal.ok) {
+                        users = await resLocal.json();
+                    }
+                }
+
+                // Filter by role & search query locally if needed
+                if (role && role !== 'ALL') {
+                    users = users.filter(u => (u.role || '').toUpperCase() === role.toUpperCase());
+                }
+
+                if (search) {
+                    users = users.filter(u => {
+                        const name = (u.full_name || u.name || '').toLowerCase();
+                        const phone = (u.phone || u.phoneNumber || '').toLowerCase();
+                        return name.includes(search) || phone.includes(search);
                     });
-                    users = Array.from(map.values());
                 }
 
                 cachedUsersList = users;
@@ -1261,37 +1266,45 @@
                 }
 
                 tbody.innerHTML = users.map(u => {
-                    const isOwner = u.role === 'OWNER';
+                    const name = u.full_name || u.name || "Foydalanuvchi";
+                    const phone = u.phone || u.phoneNumber || "—";
+                    const uRole = (u.role || 'STUDENT').toUpperCase();
+                    const isOwner = uRole === 'OWNER';
                     const roleTag = isOwner 
                         ? `<span class="bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full"><i class="fa-solid fa-user-tie mr-1"></i>Uy Egasi</span>`
                         : `<span class="bg-purple-500/20 text-purple-400 border border-purple-500/30 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full"><i class="fa-solid fa-graduation-cap mr-1"></i>Talaba</span>`;
 
-                    const isActive = u.status === 'ACTIVE';
+                    const uStatus = (u.status || 'ACTIVE').toUpperCase();
+                    const isActive = uStatus === 'ACTIVE';
                     const statusPill = isActive
                         ? `<span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">FAOL</span>`
                         : `<span class="bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">BLOKLANGAN</span>`;
 
-                    const trustColor = u.trust_score >= 80 ? 'bg-emerald-500' : (u.trust_score >= 50 ? 'bg-amber-500' : 'bg-rose-500');
+                    const trustScore = u.trust_score !== undefined ? u.trust_score : (u.trustScore !== undefined ? u.trustScore : 85);
+                    const trustColor = trustScore >= 80 ? 'bg-emerald-500' : (trustScore >= 50 ? 'bg-amber-500' : 'bg-rose-500');
+
+                    const avatarUrl = u.avatar || u.photo;
+                    const avatarHtml = avatarUrl 
+                        ? `<img src="${avatarUrl}" class="w-9 h-9 rounded-full object-cover border border-slate-700">`
+                        : `<div class="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-white">${name.charAt(0)}</div>`;
 
                     return `
                     <tr class="hover:bg-slate-900/40 transition">
                         <td class="px-6 py-4 flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-white">
-                                ${u.full_name.charAt(0)}
-                            </div>
+                            ${avatarHtml}
                             <div>
-                                <div class="font-semibold text-white text-sm">${u.full_name}</div>
-                                <div class="text-[11px] text-slate-400">${u.listings_count || 1} ta e'loni bor</div>
+                                <div class="font-semibold text-white text-sm">${name}</div>
+                                <div class="text-[11px] text-slate-400">${u.listings_count || u.listingsCount || 1} ta e'loni bor</div>
                             </div>
                         </td>
-                        <td class="px-6 py-4 font-mono text-slate-300">${u.phone}</td>
+                        <td class="px-6 py-4 font-mono text-slate-300">${phone}</td>
                         <td class="px-6 py-4">${roleTag}</td>
                         <td class="px-6 py-4">
                             <div class="flex items-center gap-2">
                                 <div class="w-24 bg-slate-800 h-2 rounded-full overflow-hidden border border-slate-700">
-                                    <div class="${trustColor} h-full" style="width: ${u.trust_score}%"></div>
+                                    <div class="${trustColor} h-full" style="width: ${trustScore}%"></div>
                                 </div>
-                                <span class="font-bold text-white text-xs">${u.trust_score}</span>
+                                <span class="font-bold text-white text-xs">${trustScore}</span>
                             </div>
                         </td>
                         <td class="px-6 py-4">${statusPill}</td>

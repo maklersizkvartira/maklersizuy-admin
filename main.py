@@ -356,6 +356,14 @@ def reject_listing_v1(
         "listing_id": listing.id
     }
 
+@app.get("/api/v1/users")
+def get_users_v1(
+    role: Optional[str] = None,
+    search: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    return get_users(role=role, search=search, db=db, admin=None)
+
 # 👥 Users Directory Endpoints
 @app.get("/api/users")
 def get_users(
