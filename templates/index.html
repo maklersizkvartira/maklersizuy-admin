@@ -1300,31 +1300,33 @@
         async function fetchListings() {
             try {
                 let data = null;
-                // 1. Fetch from direct server API endpoint first (CORS error free)
+                // 1. Fetch from direct server API endpoint first
                 try {
                     const resLocal = await fetch(`${API_BASE}/api/v1/listings`, { headers: getAuthHeaders() });
                     if (resLocal.ok && resLocal.headers.get('content-type')?.includes('application/json')) {
-                        data = await resLocal.json();
+                        const raw = await resLocal.json();
+                        data = Array.isArray(raw) ? raw : (raw.data || raw.listings || []);
                     }
                 } catch (e) {}
 
                 // 2. Secondary fallback to external Railway domain if needed
-                if (!data || !Array.isArray(data)) {
+                if (!data || !Array.isArray(data) || data.length === 0) {
                     try {
                         const res = await fetch(`${API_BASE_URL}/listings`, { headers: getAuthHeaders() });
                         if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
-                            data = await res.json();
+                            const raw = await res.json();
+                            data = Array.isArray(raw) ? raw : (raw.data || raw.listings || []);
                         }
                     } catch (e) {}
                 }
 
-                cachedListingsList = Array.isArray(data) ? data : (data?.listings || data?.data || []);
+                cachedListingsList = Array.isArray(data) ? data : [];
                 
                 // Refresh users and stats with real data
                 await loadUsers(true);
                 loadDashboardStats();
                 loadAiBlockedListings();
-                if (currentTab === 'listings') loadAllListings();
+                loadAllListings();
             } catch (err) {
                 console.error("fetchListings error:", err);
             }
