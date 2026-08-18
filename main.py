@@ -7,7 +7,7 @@ from typing import Optional, List
 import json
 
 from app.database import get_db, init_db_and_seed, hash_password
-from app.models import AdminUser, User, Listing, TrafficMetric, Report
+from app.models import AdminUser, User, Listing, TrafficMetric, Report, Verification
 from app.schemas import (
     LoginRequest, LoginResponse, ListingStatusUpdate,
     ListingFeaturedUpdate, UserStatusUpdate, UserTrustScoreUpdate,
@@ -569,3 +569,51 @@ def get_admin_analytics_v1(db: Session = Depends(get_db)):
             "university_demand": university_demand
         }
     }
+
+# 🛡 Verification API Routes
+@app.get("/api/v1/admin/verifications")
+def get_admin_verifications_v1(db: Session = Depends(get_db)):
+    verifications = db.query(Verification).order_by(Verification.id.desc()).all()
+    result = []
+    for v in verifications:
+        result.append({
+            "id": f"ver-{v.id}",
+            "raw_id": v.id,
+            "userId": f"user_{v.user_id}" if v.user_id else f"user_{v.id}",
+            "userName": v.user_name,
+            "userPhone": v.user_phone,
+            "level": v.level,
+            "trustScore": v.trust_score,
+            "passportImage": v.passport_image or "https://images.unsplash.com/photo-1544717305-2782549b5136?w=600",
+            "selfieImage": v.selfie_image or "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600",
+            "cadastreCode": v.cadastre_code or "10:01:04:02:01:0045",
+            "status": v.status,
+            "submittedAt": v.submitted_at.isoformat() if v.submitted_at else None
+        })
+    return {"status": "success", "totalCount": len(result), "data": result}
+
+@app.post("/api/v1/admin/verifications/{id}/approve")
+def approve_admin_verification_v1(id: str, db: Session = Depends(get_db)):
+    raw_id = int(id.replace("ver-", "")) if "ver-" in id else int(id)
+    ver = db.query(Verification).filter(Verification.id == raw_id).first()
+    if not ver:
+        raise HTTPException(status_code=404, detail="Tekshiruv so'rovi topilmadi")
+    ver.status = "APPROVED"
+    ver.level = 5
+    ver.trust_score = 99
+    if ver.user_id:
+        user = db.query(User).filter(User.id == ver.user_id).first()
+        if user:
+            user.trust_score = 99
+    db.commit()
+    return {"status": "success", "message": "Foydalanuvchi muvaffaqiyatli VIP Level 5 ga ko'tarildi", "id": id}
+
+@app.post("/api/v1/admin/verifications/{id}/reject")
+def reject_admin_verification_v1(id: str, db: Session = Depends(get_db)):
+    raw_id = int(id.replace("ver-", "")) if "ver-" in id else int(id)
+    ver = db.query(Verification).filter(Verification.id == raw_id).first()
+    if not ver:
+        raise HTTPException(status_code=404, detail="Tekshiruv so'rovi topilmadi")
+    ver.status = "REJECTED"
+    db.commit()
+    return {"status": "success", "message": "Tekshiruv so'rovi rad etildi", "id": id}

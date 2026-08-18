@@ -76,3 +76,19 @@ class Report(Base):
     details = Column(Text, nullable=True)
     status = Column(String, default="PENDING")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+class Verification(Base):
+    __tablename__ = 'verifications'
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    user_name = Column(String, nullable=False)
+    user_phone = Column(String, nullable=False)
+    level = Column(Integer, default=4)
+    trust_score = Column(Integer, default=98)
+    passport_image = Column(String, nullable=True)
+    selfie_image = Column(String, nullable=True)
+    cadastre_code = Column(String, nullable=True)
+    status = Column(String, default="PENDING")
+    submitted_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+

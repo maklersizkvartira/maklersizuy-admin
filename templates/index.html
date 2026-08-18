@@ -192,6 +192,12 @@
                         <span id="aiBlockedBadge" class="bg-rose-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full ml-1 animate-pulse">0</span>
                     </button>
 
+                    <button onclick="switchTab('verifications')" id="tab-verifications" class="tab-btn px-4 py-2.5 rounded-xl text-sm font-medium transition flex items-center gap-2 text-slate-300 hover:text-white hover:bg-slate-800/60 whitespace-nowrap relative">
+                        <i class="fa-solid fa-shield-halved text-emerald-400"></i>
+                        <span>Ishonchli Tekshiruvlar</span>
+                        <span id="verificationsBadge" class="bg-emerald-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full ml-1">0</span>
+                    </button>
+
                     <button onclick="switchTab('reports')" id="tab-reports" class="tab-btn px-4 py-2.5 rounded-xl text-sm font-medium transition flex items-center gap-2 text-slate-300 hover:text-white hover:bg-slate-800/60 whitespace-nowrap relative">
                         <i class="fa-solid fa-triangle-exclamation text-rose-400"></i>
                         <span>Shikoyatlar & Murojaatlar</span>
@@ -625,6 +631,25 @@
                 </div>
             </section>
 
+            <!-- ========================================== -->
+            <!-- SECTION 7: ISHONCHLI TEKSHIRUVLAR (VERIFICATIONS) -->
+            <!-- ========================================== -->
+            <section id="sec-verifications" class="hidden space-y-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold font-heading text-white flex items-center gap-2">
+                            <i class="fa-solid fa-shield-halved text-emerald-400"></i>
+                            <span>Ishonchli Tekshiruvlar (Verifications & VIP Level 5)</span>
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-1">Uy egalari tomonidan yuklangan Pasport, Jonli Selfie va Kadastr hujjatlarini ko'rib chiqish hamda VIP maqomini berish</p>
+                    </div>
+                </div>
+
+                <div id="verificationsContainer" class="grid grid-cols-1 gap-6">
+                    <!-- Dynamic Injected -->
+                </div>
+            </section>
+
         </main>
     </div>
 
@@ -788,6 +813,19 @@
                     Foydalanuvchini Saqlash
                 </button>
             </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL 4: IMAGE PREVIEW MODAL -->
+    <!-- ========================================== -->
+    <div id="imagePreviewModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md hidden p-4" onclick="closeModal('imagePreviewModal')">
+        <div class="relative max-w-3xl w-full p-4 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl" onclick="event.stopPropagation()">
+            <button onclick="closeModal('imagePreviewModal')" class="absolute top-4 right-4 text-slate-300 hover:text-white p-2 text-xl bg-slate-800/80 hover:bg-slate-700 rounded-full z-10">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <h4 id="imagePreviewTitle" class="text-sm font-bold text-white mb-3 px-1">Hujjat Rasmi</h4>
+            <img id="imagePreviewTarget" src="" alt="preview" class="w-full max-h-[75vh] object-contain rounded-xl border border-slate-800">
         </div>
     </div>
 
@@ -992,6 +1030,7 @@
 
             if (tabId === 'dashboard') loadDashboardStats();
             else if (tabId === 'ai-blocked') loadAiBlockedListings();
+            else if (tabId === 'verifications') loadVerifications();
             else if (tabId === 'reports') loadReports();
             else if (tabId === 'analytics') loadAnalyticsDashboard();
             else if (tabId === 'users') loadUsers();
@@ -2106,6 +2145,237 @@
                     </div>
                 `).join('');
             }
+        }
+
+        // ==========================================
+        // 7. VERIFICATIONS DIRECTORY LOGIC
+        // ==========================================
+        async function loadVerifications() {
+            const container = document.getElementById('verificationsContainer');
+            container.innerHTML = `<div class="text-center py-12 text-slate-500"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i><p>Tekshiruv so'rovlari yuklanmoqda...</p></div>`;
+
+            try {
+                let verifications = [];
+
+                // 1. Fetch from direct server API endpoint first (CORS error free)
+                try {
+                    const resLocal = await fetch(`${API_BASE}/api/v1/admin/verifications`, { headers: getAuthHeaders() });
+                    if (resLocal.ok && resLocal.headers.get('content-type')?.includes('application/json')) {
+                        const jsonLocal = await resLocal.json();
+                        verifications = Array.isArray(jsonLocal) ? jsonLocal : (jsonLocal.data || jsonLocal.verifications || []);
+                    }
+                } catch (e) {}
+
+                // 2. Secondary fallback to Railway domain if needed
+                if (!verifications || verifications.length === 0) {
+                    try {
+                        const res = await fetch(`${API_BASE_URL}/admin/verifications`, { headers: getAuthHeaders() });
+                        if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
+                            const json = await res.json();
+                            verifications = Array.isArray(json) ? json : (json.data || json.verifications || []);
+                        }
+                    } catch (e) {}
+                }
+
+                const pendingCount = verifications.filter(v => (v.status || 'PENDING').toUpperCase() === 'PENDING').length;
+                document.getElementById('verificationsBadge').textContent = pendingCount;
+
+                if (verifications.length === 0) {
+                    container.innerHTML = `
+                        <div class="glass-panel p-12 text-center rounded-2xl border border-slate-800">
+                            <i class="fa-solid fa-shield-circle-check text-4xl text-emerald-400 mb-3"></i>
+                            <h3 class="text-lg font-bold text-white">Yangi Tekshiruv So'rovlari Yo'q</h3>
+                            <p class="text-xs text-slate-400 mt-1">Barcha hujjatlar ko'rib chiqilgan va tasdiqlangan.</p>
+                        </div>`;
+                    return;
+                }
+
+                container.innerHTML = verifications.map(item => {
+                    const isApproved = (item.status || 'PENDING').toUpperCase() === 'APPROVED';
+                    const isRejected = (item.status || 'PENDING').toUpperCase() === 'REJECTED';
+
+                    const statusBadge = isApproved
+                        ? `<span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold px-3 py-1 rounded-full uppercase"><i class="fa-solid fa-certificate mr-1"></i> Level 5 VIP (Tasdiqlangan)</span>`
+                        : (isRejected
+                            ? `<span class="bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-bold px-3 py-1 rounded-full uppercase">❌ RAD ETILGAN</span>`
+                            : `<span class="bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-bold px-3 py-1 rounded-full uppercase animate-pulse"><i class="fa-solid fa-clock mr-1"></i> KO'RIB CHIQILMOQDA (PENDING)</span>`);
+
+                    const passportImg = item.passportImage || "https://images.unsplash.com/photo-1544717305-2782549b5136?w=600";
+                    const selfieImg = item.selfieImage || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600";
+                    const cadastreCode = item.cadastreCode || "10:01:04:02:01:0045";
+                    const phoneClean = (item.userPhone || '').replace(/[^0-9+]/g, '');
+
+                    return `
+                    <div class="glass-panel p-6 rounded-2xl border border-slate-800/80 shadow-2xl flex flex-col lg:flex-row items-stretch justify-between gap-6 hover:border-slate-700 transition">
+                        <!-- Column 1: User Info -->
+                        <div class="lg:w-1/3 space-y-3 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-800/80 pb-4 lg:pb-0 lg:pr-6">
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Foydalanuvchi Profili</div>
+                                    ${statusBadge}
+                                </div>
+                                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                                    <i class="fa-solid fa-user-check text-emerald-400"></i>
+                                    <span>${item.userName || "Foydalanuvchi"}</span>
+                                </h3>
+                                <div class="text-xs text-slate-300 font-mono mt-1 flex items-center gap-2">
+                                    <i class="fa-solid fa-phone text-slate-500"></i>
+                                    <a href="tel:${phoneClean}" class="hover:text-brand-400">${item.userPhone || "—"}</a>
+                                </div>
+                            </div>
+
+                            <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800 space-y-2 text-xs">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-slate-400">Joriy Level:</span>
+                                    <span class="font-bold text-amber-400">Level ${item.level || 4} 🏠</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-slate-400">Trust Score:</span>
+                                    <span class="font-bold text-emerald-400">${item.trustScore || 98} / 100 pt</span>
+                                </div>
+                                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden border border-slate-700">
+                                    <div class="bg-emerald-500 h-full" style="width: ${item.trustScore || 98}%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Column 2: Uploaded Documents Preview -->
+                        <div class="lg:w-1/2 space-y-3 flex flex-col justify-between">
+                            <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Yuklangan Hujjatlar va Kadastr</div>
+                            
+                            <div class="grid grid-cols-2 gap-3">
+                                <!-- Passport Image Thumbnail -->
+                                <div class="group relative bg-slate-900 border border-slate-800 rounded-xl overflow-hidden cursor-pointer" onclick="openImageModal('${passportImg}', 'Pasport / ID Karta')">
+                                    <img src="${passportImg}" alt="passport" class="w-full h-28 object-cover group-hover:scale-105 transition">
+                                    <div class="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold transition">
+                                        <i class="fa-solid fa-magnifying-glass-plus mr-1"></i> Kattalashtirish
+                                    </div>
+                                    <div class="absolute bottom-0 inset-x-0 bg-slate-950/80 px-2 py-1 text-[10px] text-slate-300 font-semibold text-center">
+                                        📄 Pasport / ID Karta
+                                    </div>
+                                </div>
+
+                                <!-- Selfie Image Thumbnail -->
+                                <div class="group relative bg-slate-900 border border-slate-800 rounded-xl overflow-hidden cursor-pointer" onclick="openImageModal('${selfieImg}', 'Jonli Selfie')">
+                                    <img src="${selfieImg}" alt="selfie" class="w-full h-28 object-cover group-hover:scale-105 transition">
+                                    <div class="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold transition">
+                                        <i class="fa-solid fa-magnifying-glass-plus mr-1"></i> Kattalashtirish
+                                    </div>
+                                    <div class="absolute bottom-0 inset-x-0 bg-slate-950/80 px-2 py-1 text-[10px] text-slate-300 font-semibold text-center">
+                                        🤳 Jonli Selfie
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Cadastre Info Box -->
+                            <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 text-xs flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <i class="fa-solid fa-file-contract text-emerald-400 text-base"></i>
+                                    <div>
+                                        <div class="text-[10px] text-slate-400 uppercase font-semibold">Kadastr Raqami</div>
+                                        <code class="font-mono text-emerald-300 font-bold">${cadastreCode}</code>
+                                    </div>
+                                </div>
+                                <span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold px-2 py-0.5 rounded-md">Ko'chmas mulk tasdiqlangan</span>
+                            </div>
+                        </div>
+
+                        <!-- Column 3: Action Buttons -->
+                        <div class="lg:w-1/4 flex flex-col justify-center gap-3 border-t lg:border-t-0 lg:border-l border-slate-800/80 pt-4 lg:pt-0 lg:pl-6">
+                            ${!isApproved ? `
+                                <button onclick="approveVerification('${item.id}')" class="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl text-xs shadow-lg transition flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-circle-check"></i>
+                                    <span>Hujjatlarni Tasdiqlash</span>
+                                </button>
+                            ` : ''}
+
+                            ${!isRejected ? `
+                                <button onclick="rejectVerification('${item.id}')" class="w-full py-3 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white font-bold rounded-xl border border-rose-500/30 text-xs transition flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-circle-xmark"></i>
+                                    <span>Rad Etish</span>
+                                </button>
+                            ` : ''}
+
+                            <a href="tel:${phoneClean}" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl border border-slate-700 text-xs transition text-center flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-phone"></i>
+                                <span>Qo'ng'iroq Qilish</span>
+                            </a>
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch (err) {
+                container.innerHTML = `<div class="text-center py-8 text-rose-400">Tekshiruv so'rovlarini yuklashda xatolik yuz berdi.</div>`;
+            }
+        }
+
+        async function approveVerification(id) {
+            try {
+                let success = false;
+                try {
+                    const resLocal = await fetch(`${API_BASE}/api/v1/admin/verifications/${id}/approve`, {
+                        method: 'POST',
+                        headers: getAuthHeaders({ 'Content-Type': 'application/json' })
+                    });
+                    if (resLocal.ok) success = true;
+                } catch (e) {}
+
+                if (!success) {
+                    try {
+                        const res = await fetch(`${API_BASE_URL}/admin/verifications/${id}/approve`, {
+                            method: 'POST',
+                            headers: getAuthHeaders({ 'Content-Type': 'application/json' })
+                        });
+                        if (res.ok) success = true;
+                    } catch (e) {}
+                }
+
+                if (success) {
+                    showToast("Foydalanuvchi hujjatlari tasdiqlandi va Level 5 VIP berildi! 🏠");
+                    await loadVerifications();
+                } else {
+                    showToast("Tasdiqlashda xatolik!", 'error');
+                }
+            } catch (e) {
+                showToast("Server xatosi!", 'error');
+            }
+        }
+
+        async function rejectVerification(id) {
+            try {
+                let success = false;
+                try {
+                    const resLocal = await fetch(`${API_BASE}/api/v1/admin/verifications/${id}/reject`, {
+                        method: 'POST',
+                        headers: getAuthHeaders({ 'Content-Type': 'application/json' })
+                    });
+                    if (resLocal.ok) success = true;
+                } catch (e) {}
+
+                if (!success) {
+                    try {
+                        const res = await fetch(`${API_BASE_URL}/admin/verifications/${id}/reject`, {
+                            method: 'POST',
+                            headers: getAuthHeaders({ 'Content-Type': 'application/json' })
+                        });
+                        if (res.ok) success = true;
+                    } catch (e) {}
+                }
+
+                if (success) {
+                    showToast("Tekshiruv so'rovi rad etildi.");
+                    await loadVerifications();
+                } else {
+                    showToast("Rad etishda xatolik!", 'error');
+                }
+            } catch (e) {
+                showToast("Server xatosi!", 'error');
+            }
+        }
+
+        function openImageModal(src, title) {
+            document.getElementById('imagePreviewTarget').src = src;
+            document.getElementById('imagePreviewTitle').textContent = title || "Hujjat Rasmi";
+            document.getElementById('imagePreviewModal').classList.remove('hidden');
         }
     </script>
 </body>

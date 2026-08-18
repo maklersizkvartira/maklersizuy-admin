@@ -6,7 +6,7 @@ import tempfile
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.models import Base, AdminUser, User, Listing, TrafficMetric, Report
+from app.models import Base, AdminUser, User, Listing, TrafficMetric, Report, Verification
 
 if os.environ.get("VERCEL") or not os.access(".", os.W_OK):
     db_path = os.path.join(tempfile.gettempdir(), "maklersiz_admin.db")
@@ -76,6 +76,43 @@ def init_db_and_seed():
             db.add_all(reports)
             db.commit()
             print("Default sample reports created.")
+
+        if not db.query(Verification).first():
+            verifications = [
+                Verification(
+                    user_name="Jasur Karimov",
+                    user_phone="+998 90 123 45 67",
+                    level=4,
+                    trust_score=98,
+                    passport_image="https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=60",
+                    selfie_image="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=60",
+                    cadastre_code="10:01:04:02:01:0045",
+                    status="PENDING"
+                ),
+                Verification(
+                    user_name="Azizbek Raximov",
+                    user_phone="+998 90 123 45 67",
+                    level=4,
+                    trust_score=95,
+                    passport_image="https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=60",
+                    selfie_image="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&auto=format&fit=crop&q=60",
+                    cadastre_code="10:05:08:03:02:0112",
+                    status="APPROVED"
+                ),
+                Verification(
+                    user_name="Malika Shodieva",
+                    user_phone="+998 91 222 33 44",
+                    level=3,
+                    trust_score=92,
+                    passport_image="https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=60",
+                    selfie_image="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&auto=format&fit=crop&q=60",
+                    cadastre_code="10:03:02:01:04:0078",
+                    status="PENDING"
+                )
+            ]
+            db.add_all(verifications)
+            db.commit()
+            print("Default verifications created.")
     except Exception as e:
         db.rollback()
         print("Database initialization error:", e)
