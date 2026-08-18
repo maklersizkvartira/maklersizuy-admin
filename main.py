@@ -732,24 +732,32 @@ def track_guest_visit(payload: dict, request: Request, db: Session = Depends(get
 
 @app.get("/api/v1/admin/guest-analytics")
 def get_guest_analytics(db: Session = Depends(get_db)):
+    # 100% Real Database Queries - Zero Mock Data
     unique_guests_count = db.query(GuestVisit.session_id).distinct().count()
-    if unique_guests_count == 0:
-        unique_guests_count = 148
 
-    today_guests = db.query(GuestVisit).filter(GuestVisit.visited_at >= datetime.now(timezone.utc).replace(hour=0, minute=0, second=0)).count()
-    if today_guests == 0:
-        today_guests = 34
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_guests = db.query(GuestVisit.session_id).filter(GuestVisit.visited_at >= today_start).distinct().count()
 
     registered_users = db.query(User).count()
     total_visitors_all = unique_guests_count + registered_users
-    guest_percentage = round((unique_guests_count / max(total_visitors_all, 1)) * 100, 1)
-    registered_percentage = round(100 - guest_percentage, 1)
+    
+    if total_visitors_all > 0:
+        guest_percentage = round((unique_guests_count / total_visitors_all) * 100, 1)
+        registered_percentage = round(100 - guest_percentage, 1)
+    else:
+        guest_percentage = 0.0
+        registered_percentage = 0.0
+
+    home_views = db.query(GuestVisit).filter(GuestVisit.page_path == "/").count()
+    search_views = db.query(GuestVisit).filter(GuestVisit.page_path.like("%search%")).count()
+    map_views = db.query(GuestVisit).filter(GuestVisit.page_path.like("%map%")).count()
+    detail_views = db.query(GuestVisit).filter(GuestVisit.page_path.like("%listing%")).count()
 
     top_pages = [
-        {"page": "Bosh Sahifa (Home)", "path": "/", "views": int(unique_guests_count * 0.45)},
-        {"page": "Kvartiralar Qidiruvi (Search)", "path": "/search", "views": int(unique_guests_count * 0.30)},
-        {"page": "O'zbekiston Xaritasi (Map)", "path": "/map", "views": int(unique_guests_count * 0.15)},
-        {"page": "Batafsil Ko'rish (Detail)", "path": "/listing", "views": int(unique_guests_count * 0.10)},
+        {"page": "Bosh Sahifa (Home)", "path": "/", "views": home_views},
+        {"page": "Kvartiralar Qidiruvi (Search)", "path": "/search", "views": search_views},
+        {"page": "O'zbekiston Xaritasi (Map)", "path": "/map", "views": map_views},
+        {"page": "Batafsil Ko'rish (Detail)", "path": "/listing", "views": detail_views},
     ]
 
     return {

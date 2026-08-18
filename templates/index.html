@@ -398,17 +398,17 @@
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                             <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800">
                                 <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Jami Mehmonlar</div>
-                                <div class="text-2xl font-black text-indigo-400 mt-1" id="statGuestTotal">148</div>
+                                <div class="text-2xl font-black text-indigo-400 mt-1" id="statGuestTotal">0</div>
                                 <div class="text-[10px] text-slate-500 mt-1">Ro'yxatdan o'tmaganlar</div>
                             </div>
                             <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800">
                                 <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Bugungi Mehmonlar</div>
-                                <div class="text-2xl font-black text-emerald-400 mt-1" id="statGuestToday">34</div>
+                                <div class="text-2xl font-black text-emerald-400 mt-1" id="statGuestToday">0</div>
                                 <div class="text-[10px] text-emerald-400 mt-1">▲ Bugun tashrif buyurganlar</div>
                             </div>
                             <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800">
                                 <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Nisbat (Mehmon / User)</div>
-                                <div class="text-2xl font-black text-amber-400 mt-1" id="statGuestRatio">82.2%</div>
+                                <div class="text-2xl font-black text-amber-400 mt-1" id="statGuestRatio">0%</div>
                                 <div class="text-[10px] text-slate-400 mt-1">Shunchaki ko'rib ketganlar</div>
                             </div>
                         </div>
@@ -416,17 +416,8 @@
                         <div>
                             <h4 class="text-xs font-bold uppercase tracking-wider text-slate-300 mb-3">Eng ko'p ko'rilgan bo'limlar (Mehmonlar tomonidan)</h4>
                             <div class="space-y-2 text-xs" id="guestTopPagesContainer">
-                                <div class="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
-                                    <span class="font-semibold text-slate-200">Bosh Sahifa (Home)</span>
-                                    <span class="font-mono font-bold text-indigo-400">67 ta ko'rilgan</span>
-                                </div>
-                                <div class="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
-                                    <span class="font-semibold text-slate-200">Kvartiralar Qidiruvi (Search)</span>
-                                    <span class="font-mono font-bold text-indigo-400">44 ta ko'rilgan</span>
-                                </div>
-                                <div class="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
-                                    <span class="font-semibold text-slate-200">O'zbekiston Xaritasi (Map)</span>
-                                    <span class="font-mono font-bold text-indigo-400">22 ta ko'rilgan</span>
+                                <div class="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between text-slate-500">
+                                    <span>Hozircha mehmonlar tashrifi yo'q</span>
                                 </div>
                             </div>
                         </div>
@@ -445,20 +436,20 @@
                                 <div>
                                     <div class="flex justify-between text-xs font-bold mb-1">
                                         <span class="text-indigo-400">👀 Shunchaki ko'rib ketganlar</span>
-                                        <span id="guestPercentLabel" class="text-indigo-400">82.2%</span>
+                                        <span id="guestPercentLabel" class="text-indigo-400">0%</span>
                                     </div>
                                     <div class="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden border border-slate-800">
-                                        <div id="guestProgressBar" class="bg-gradient-to-r from-indigo-500 to-purple-500 h-full rounded-full" style="width: 82.2%"></div>
+                                        <div id="guestProgressBar" class="bg-gradient-to-r from-indigo-500 to-purple-500 h-full rounded-full" style="width: 0%"></div>
                                     </div>
                                 </div>
 
                                 <div>
                                     <div class="flex justify-between text-xs font-bold mb-1">
                                         <span class="text-emerald-400">✅ Ro'yxatdan o'tgan userlar</span>
-                                        <span id="userPercentLabel" class="text-emerald-400">17.8%</span>
+                                        <span id="userPercentLabel" class="text-emerald-400">0%</span>
                                     </div>
                                     <div class="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden border border-slate-800">
-                                        <div id="userProgressBar" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full" style="width: 17.8%"></div>
+                                        <div id="userProgressBar" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full" style="width: 0%"></div>
                                     </div>
                                 </div>
                             </div>
@@ -1100,15 +1091,15 @@
                 }
 
                 if (data) {
-                    if (document.getElementById('statGuestTotal')) document.getElementById('statGuestTotal').textContent = data.total_guest_visitors || 148;
-                    if (document.getElementById('statGuestToday')) document.getElementById('statGuestToday').textContent = data.today_guest_visitors || 34;
-                    if (document.getElementById('statGuestRatio')) document.getElementById('statGuestRatio').textContent = `${data.guest_percentage || 82.2}%`;
+                    if (document.getElementById('statGuestTotal')) document.getElementById('statGuestTotal').textContent = data.total_guest_visitors ?? 0;
+                    if (document.getElementById('statGuestToday')) document.getElementById('statGuestToday').textContent = data.today_guest_visitors ?? 0;
+                    if (document.getElementById('statGuestRatio')) document.getElementById('statGuestRatio').textContent = `${data.guest_percentage ?? 0}%`;
                     
-                    if (document.getElementById('guestPercentLabel')) document.getElementById('guestPercentLabel').textContent = `${data.guest_percentage || 82.2}%`;
-                    if (document.getElementById('userPercentLabel')) document.getElementById('userPercentLabel').textContent = `${data.registered_percentage || 17.8}%`;
+                    if (document.getElementById('guestPercentLabel')) document.getElementById('guestPercentLabel').textContent = `${data.guest_percentage ?? 0}%`;
+                    if (document.getElementById('userPercentLabel')) document.getElementById('userPercentLabel').textContent = `${data.registered_percentage ?? 0}%`;
                     
-                    if (document.getElementById('guestProgressBar')) document.getElementById('guestProgressBar').style.width = `${data.guest_percentage || 82.2}%`;
-                    if (document.getElementById('userProgressBar')) document.getElementById('userProgressBar').style.width = `${data.registered_percentage || 17.8}%`;
+                    if (document.getElementById('guestProgressBar')) document.getElementById('guestProgressBar').style.width = `${data.guest_percentage ?? 0}%`;
+                    if (document.getElementById('userProgressBar')) document.getElementById('userProgressBar').style.width = `${data.registered_percentage ?? 0}%`;
 
                     const pagesContainer = document.getElementById('guestTopPagesContainer');
                     if (pagesContainer && Array.isArray(data.top_pages)) {
