@@ -1774,6 +1774,7 @@
                         ? `<img src="${avatarUrl}" class="w-9 h-9 rounded-full object-cover border border-slate-700">`
                         : `<div class="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-white">${name.charAt(0)}</div>`;
 
+                    const listingsCount = u.listings_count !== undefined ? u.listings_count : (u.listingsCount !== undefined ? u.listingsCount : 0);
                     const isVerified = trustScore >= 90;
                     const verifiedBadgeHtml = isVerified 
                         ? `<span class="text-blue-400 text-xs ml-1" title="Tasdiqlangan Foydalanuvchi (Verified)"><i class="fa-solid fa-circle-check"></i></span>`
