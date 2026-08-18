@@ -7,7 +7,7 @@ from typing import Optional, List
 import json
 
 from app.database import get_db, init_db_and_seed, hash_password
-from app.models import AdminUser, User, Listing, TrafficMetric
+from app.models import AdminUser, User, Listing, TrafficMetric, Report
 from app.schemas import (
     LoginRequest, LoginResponse, ListingStatusUpdate,
     ListingFeaturedUpdate, UserStatusUpdate, UserTrustScoreUpdate,
