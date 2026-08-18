@@ -724,6 +724,11 @@
                 </div>
 
                 <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Uy Egasining Aniq Manzili (Ko'cha / Uy / Mo'ljal)</label>
+                    <input type="text" id="formListingAddress" placeholder="Masalan: Mustaqillik ko'chasi, 15-uy" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-emerald-300 font-semibold focus:border-brand-500 focus:outline-none">
+                </div>
+
+                <div>
                     <label class="block text-xs font-semibold text-slate-300 mb-1">Uy Egasi (Foydalanuvchi ID yoki Tanlang)</label>
                     <select id="formListingOwnerId" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:border-brand-500 focus:outline-none">
                         <!-- Dynamic options loaded -->
@@ -1748,6 +1753,7 @@
                     document.getElementById('formListingCategory').value = item.category || 'Kvartira';
                     document.getElementById('formListingRooms').value = getRooms(item);
                     document.getElementById('formListingDistrict').value = getDistrict(item);
+                    document.getElementById('formListingAddress').value = item.address || '';
                     document.getElementById('formListingOwnerId').value = item.owner?.id || (cachedUsersList[0]?.id || 1);
                     document.getElementById('formListingDescription').value = item.description || '';
                     document.getElementById('formListingImages').value = getImages(item).join(', ');
@@ -1776,6 +1782,7 @@
                 category: document.getElementById('formListingCategory').value,
                 room_count: parseInt(document.getElementById('formListingRooms').value),
                 district: document.getElementById('formListingDistrict').value,
+                address: document.getElementById('formListingAddress').value,
                 owner_id: parseInt(document.getElementById('formListingOwnerId').value),
                 description: document.getElementById('formListingDescription').value,
                 images: imagesList,
