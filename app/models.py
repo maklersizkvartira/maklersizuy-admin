@@ -93,3 +93,13 @@ class Verification(Base):
     status = Column(String, default="PENDING")
     submitted_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
+class GuestVisit(Base):
+    __tablename__ = 'guest_visits'
+
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(String, index=True, nullable=False)
+    page_path = Column(String, default="/")
+    user_agent = Column(String, nullable=True)
+    ip_address = Column(String, nullable=True)
+    visited_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+

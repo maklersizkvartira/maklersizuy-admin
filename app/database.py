@@ -6,7 +6,7 @@ import tempfile
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-from app.models import Base, AdminUser, User, Listing, TrafficMetric, Report, Verification
+from app.models import Base, AdminUser, User, Listing, TrafficMetric, Report, Verification, GuestVisit
 
 if os.environ.get("VERCEL") or not os.access(".", os.W_OK):
     db_path = os.path.join(tempfile.gettempdir(), "maklersiz_admin.db")
