@@ -59,7 +59,20 @@ class TrafficMetric(Base):
     id = Column(Integer, primary_key=True, index=True)
     date = Column(String, index=True, nullable=False) # YYYY-MM-DD
     daily_visitors = Column(Integer, default=0)
-    total_searches = Column(Integer, default=0)
+    searches = Column(Integer, default=0)
     new_listings_count = Column(Integer, default=0)
     ai_auto_approved = Column(Integer, default=0)
     ai_flagged = Column(Integer, default=0)
+
+class Report(Base):
+    __tablename__ = 'reports'
+
+    id = Column(Integer, primary_key=True, index=True)
+    listing_id = Column(Integer, ForeignKey('listings.id'), nullable=True)
+    listing_title = Column(String, nullable=False)
+    reporter_name = Column(String, nullable=False)
+    reporter_phone = Column(String, nullable=False)
+    reason_label = Column(String, nullable=False)
+    details = Column(Text, nullable=True)
+    status = Column(String, default="PENDING")
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

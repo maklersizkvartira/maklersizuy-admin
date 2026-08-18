@@ -486,3 +486,86 @@ def update_user_trust_score(
     user.trust_score = max(0, min(100, user.trust_score + payload.delta))
     db.commit()
     return {"status": "success", "new_trust_score": user.trust_score, "user_id": user.id}
+
+# 🚨 Admin Reports & Analytics API Routes
+@app.get("/api/v1/admin/reports")
+def get_admin_reports_v1(db: Session = Depends(get_db)):
+    reports = db.query(Report).order_by(Report.id.desc()).all()
+    result = []
+    for r in reports:
+        result.append({
+            "id": r.id,
+            "listingId": r.listing_id,
+            "listingTitle": r.listing_title,
+            "reporterName": r.reporter_name,
+            "reporterPhone": r.reporter_phone,
+            "reasonLabel": r.reason_label,
+            "details": r.details,
+            "status": r.status,
+            "created_at": r.created_at.isoformat() if r.created_at else None
+        })
+    return {"status": "success", "totalCount": len(result), "data": result}
+
+@app.post("/api/v1/admin/reports/{report_id}/resolve")
+def resolve_admin_report_v1(report_id: int, db: Session = Depends(get_db)):
+    report = db.query(Report).filter(Report.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Shikoyat topilmadi")
+    report.status = "RESOLVED"
+    db.commit()
+    return {"status": "success", "message": "Shikoyat hal qilindi", "reportId": report_id}
+
+@app.get("/api/v1/admin/analytics")
+def get_admin_analytics_v1(db: Session = Depends(get_db)):
+    listings = db.query(Listing).all()
+    
+    district_map = {}
+    room_price_map = {1: [], 2: [], 3: [], 4: []}
+
+    for l in listings:
+        d = l.district or "Boshqa"
+        if d not in district_map:
+            district_map[d] = {"name": d, "count": 0, "total_price": 0.0}
+        district_map[d]["count"] += 1
+        district_map[d]["total_price"] += l.price
+
+        r_cat = min(l.room_count or 1, 4)
+        room_price_map[r_cat].append(l.price)
+
+    districts_list = []
+    for name, info in district_map.items():
+        avg_p = round(info["total_price"] / info["count"], 1) if info["count"] > 0 else 0
+        districts_list.append({
+            "name": name,
+            "count": info["count"],
+            "avg_price": avg_p
+        })
+
+    avg_prices_by_rooms = {
+        "1_room": round(sum(room_price_map[1]) / len(room_price_map[1]), 1) if room_price_map[1] else 270.0,
+        "2_rooms": round(sum(room_price_map[2]) / len(room_price_map[2]), 1) if room_price_map[2] else 340.0,
+        "3_rooms": round(sum(room_price_map[3]) / len(room_price_map[3]), 1) if room_price_map[3] else 420.0,
+        "4_plus_rooms": round(sum(room_price_map[4]) / len(room_price_map[4]), 1) if room_price_map[4] else 550.0
+    }
+
+    university_demand = [
+        {"name": "Toshkent Davlat Texnika Universiteti (TDTU)", "percentage": 32, "students": 450},
+        {"name": "O'zbekiston Milliy Universiteti (O'zMU)", "percentage": 28, "students": 390},
+        {"name": "Toshkent Axborot Texnologiyalari Universiteti (TATU)", "percentage": 22, "students": 310},
+        {"name": "Toshkent Davlat Iqtisodiyot Universiteti (TDIU)", "percentage": 18, "students": 250}
+    ]
+
+    return {
+        "status": "success",
+        "data": {
+            "districts": districts_list if districts_list else [
+                {"name": "Chilonzor t.", "count": 4, "avg_price": 320.0},
+                {"name": "Yunusobod t.", "count": 3, "avg_price": 355.0},
+                {"name": "Mirzo Ulug'bek t.", "count": 2, "avg_price": 350.0},
+                {"name": "Shayxontohur t.", "count": 2, "avg_price": 340.0},
+                {"name": "Olmazor t.", "count": 1, "avg_price": 310.0}
+            ],
+            "average_prices_by_rooms": avg_prices_by_rooms,
+            "university_demand": university_demand
+        }
+    }

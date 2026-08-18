@@ -192,6 +192,17 @@
                         <span id="aiBlockedBadge" class="bg-rose-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full ml-1 animate-pulse">0</span>
                     </button>
 
+                    <button onclick="switchTab('reports')" id="tab-reports" class="tab-btn px-4 py-2.5 rounded-xl text-sm font-medium transition flex items-center gap-2 text-slate-300 hover:text-white hover:bg-slate-800/60 whitespace-nowrap relative">
+                        <i class="fa-solid fa-triangle-exclamation text-rose-400"></i>
+                        <span>Shikoyatlar & Murojaatlar</span>
+                        <span id="reportsBadge" class="bg-rose-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full ml-1">0</span>
+                    </button>
+
+                    <button onclick="switchTab('analytics')" id="tab-analytics" class="tab-btn px-4 py-2.5 rounded-xl text-sm font-medium transition flex items-center gap-2 text-slate-300 hover:text-white hover:bg-slate-800/60 whitespace-nowrap">
+                        <i class="fa-solid fa-chart-line text-purple-400"></i>
+                        <span>Tumanlar & Narxlar Analitikasi</span>
+                    </button>
+
                     <button onclick="switchTab('users')" id="tab-users" class="tab-btn px-4 py-2.5 rounded-xl text-sm font-medium transition flex items-center gap-2 text-slate-300 hover:text-white hover:bg-slate-800/60 whitespace-nowrap">
                         <i class="fa-solid fa-users text-blue-400"></i>
                         <span>Foydalanuvchilar Bazasi</span>
@@ -508,6 +519,106 @@
                                 <!-- Dynamic Render -->
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            <!-- ========================================== -->
+            <!-- SECTION 5: SHIKOYATLAR VA MUROJAATLAR -->
+            <!-- ========================================== -->
+            <section id="sec-reports" class="hidden space-y-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold font-heading text-white flex items-center gap-2">
+                            <i class="fa-solid fa-triangle-exclamation text-rose-500"></i>
+                            <span>Foydalanuvchilar Shikoyatlari va Murojaatlari</span>
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-1">Sayt foydalanuvchilari tomonidan bildirilgan shubhali e'lonlar va rieltorlik shikoyatlari</p>
+                    </div>
+                </div>
+
+                <div class="glass-panel rounded-2xl border border-slate-800/80 overflow-hidden shadow-2xl">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-900/80 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[11px]">
+                                    <th class="px-6 py-4">E'lon Sarlavhasi</th>
+                                    <th class="px-6 py-4">Murojaat Qilgan Shaxs</th>
+                                    <th class="px-6 py-4">Shikoyat Sababi</th>
+                                    <th class="px-6 py-4">Batafsil Izoh</th>
+                                    <th class="px-6 py-4">Status</th>
+                                    <th class="px-6 py-4 text-right">Amal</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reportsTableBody" class="divide-y divide-slate-800/60">
+                                <!-- Dynamic Render -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- SECTION 6: TUMANLAR VA NARXLAR ANALITIKASI -->
+            <!-- ========================================== -->
+            <section id="sec-analytics" class="hidden space-y-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold font-heading text-white flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-purple-400"></i>
+                            <span>Tashkent Tumanlari va Ijara Narxlari Analitikasi</span>
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-1">Tumanlar bo'yicha takliflar, xonalar ijarasi o'rtacha narxi hamda talaba talabi statistikasi</p>
+                    </div>
+                </div>
+
+                <!-- KPI Overview Grid for Rooms Average Prices -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4" id="roomPricesCards">
+                    <!-- Dynamic Injected -->
+                </div>
+
+                <!-- Charts Row: Districts Bar Chart & University Demand Doughnut -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Districts Chart Container -->
+                    <div class="lg:col-span-2 glass-panel rounded-2xl border border-slate-800/80 p-6 flex flex-col justify-between shadow-2xl">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                    <i class="fa-solid fa-city text-brand-400"></i>
+                                    <span>Tashkent Tumanlari: O'rtacha Ijara Narxi ($ USD) va E'lonlar Soni</span>
+                                </h3>
+                            </div>
+                            <div class="relative h-72 w-full">
+                                <canvas id="districtChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- University Demand Chart Container -->
+                    <div class="glass-panel rounded-2xl border border-slate-800/80 p-6 flex flex-col justify-between shadow-2xl">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                    <i class="fa-solid fa-graduation-cap text-purple-400"></i>
+                                    <span>Universitetlar Bo'yicha Talaba Talabi</span>
+                                </h3>
+                            </div>
+                            <div class="relative h-64 w-full flex items-center justify-center">
+                                <canvas id="universityChart"></canvas>
+                            </div>
+                            <div id="universityLegendList" class="mt-4 space-y-2 text-xs">
+                                <!-- Dynamic List -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Districts Summary Grid Cards -->
+                <div class="glass-panel rounded-2xl border border-slate-800/80 p-6 shadow-2xl">
+                    <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-emerald-400"></i>
+                        <span>Tumanlar Kesimidagi Batafsil Tahlil</span>
+                    </h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4" id="districtsGridCards">
+                        <!-- Dynamic Injected -->
                     </div>
                 </div>
             </section>
@@ -863,17 +974,24 @@
             window.location.reload();
         }
 
+        let districtChartInstance = null;
+        let universityChartInstance = null;
+
         // Tab Navigation
         function switchTab(tabId) {
             currentTab = tabId;
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(`tab-${tabId}`).classList.add('active');
+            const activeBtn = document.getElementById(`tab-${tabId}`);
+            if (activeBtn) activeBtn.classList.add('active');
 
             document.querySelectorAll('main > section').forEach(sec => sec.classList.add('hidden'));
-            document.getElementById(`sec-${tabId}`).classList.remove('hidden');
+            const activeSec = document.getElementById(`sec-${tabId}`);
+            if (activeSec) activeSec.classList.remove('hidden');
 
             if (tabId === 'dashboard') loadDashboardStats();
             else if (tabId === 'ai-blocked') loadAiBlockedListings();
+            else if (tabId === 'reports') loadReports();
+            else if (tabId === 'analytics') loadAnalyticsDashboard();
             else if (tabId === 'users') loadUsers();
             else if (tabId === 'listings') loadAllListings();
         }
@@ -1699,6 +1817,292 @@
                 }
             } catch (err) {
                 showToast("Server bilan bog'lanishda xatolik!", 'error');
+            }
+        }
+
+        // ==========================================
+        // 5. REPORTS DIRECTORY LOGIC
+        // ==========================================
+        async function loadReports() {
+            const tbody = document.getElementById('reportsTableBody');
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-500"><i class="fa-solid fa-spinner fa-spin text-xl mb-2"></i><p>Yuklanmoqda...</p></td></tr>`;
+
+            try {
+                let reports = [];
+
+                // 1. Fetch from direct server API endpoint first (CORS error free)
+                try {
+                    const resLocal = await fetch(`${API_BASE}/api/v1/admin/reports`, { headers: getAuthHeaders() });
+                    if (resLocal.ok && resLocal.headers.get('content-type')?.includes('application/json')) {
+                        const jsonLocal = await resLocal.json();
+                        reports = Array.isArray(jsonLocal) ? jsonLocal : (jsonLocal.data || jsonLocal.reports || []);
+                    }
+                } catch (e) {}
+
+                // 2. Secondary fallback to Railway domain if needed
+                if (!reports || reports.length === 0) {
+                    try {
+                        const res = await fetch(`${API_BASE_URL}/admin/reports`, { headers: getAuthHeaders() });
+                        if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
+                            const json = await res.json();
+                            reports = Array.isArray(json) ? json : (json.data || json.reports || []);
+                        }
+                    } catch (e) {}
+                }
+
+                const pendingCount = reports.filter(r => (r.status || 'PENDING').toUpperCase() === 'PENDING').length;
+                document.getElementById('reportsBadge').textContent = pendingCount;
+
+                if (reports.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-500">Murojaat va shikoyatlar yo'q</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = reports.map(r => {
+                    const isResolved = (r.status || 'PENDING').toUpperCase() === 'RESOLVED';
+                    const statusPill = isResolved 
+                        ? `<span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">HAL QILINDI</span>`
+                        : `<span class="bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">KUTILMOQDA</span>`;
+
+                    const phoneClean = (r.reporterPhone || r.phone || '').replace(/[^0-9+]/g, '');
+
+                    return `
+                    <tr class="hover:bg-slate-900/40 transition">
+                        <td class="px-6 py-4">
+                            <div class="font-bold text-white text-sm line-clamp-1">${r.listingTitle || "E'lon sarlavhasi"}</div>
+                            <div class="text-[11px] text-slate-400 font-mono">ID: #${r.listingId || r.id}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-white font-medium">${r.reporterName || "Noma'lum"}</div>
+                            <a href="tel:${phoneClean}" class="text-[11px] text-brand-400 hover:underline font-mono">${r.reporterPhone || "—"}</a>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="bg-rose-950/60 text-rose-300 border border-rose-500/30 text-[11px] font-bold px-2.5 py-1 rounded-lg">
+                                ${r.reasonLabel || "Shikoyat"}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 max-w-xs">
+                            <p class="text-slate-300 text-xs line-clamp-2">${r.details || "Izoh ko'rsatilmadi"}</p>
+                        </td>
+                        <td class="px-6 py-4">${statusPill}</td>
+                        <td class="px-6 py-4 text-right">
+                            ${!isResolved ? `
+                                <button onclick="resolveReport(${r.id})" class="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white font-semibold rounded-lg border border-emerald-500/30 text-xs transition flex items-center gap-1 ml-auto">
+                                    <i class="fa-solid fa-check"></i> Hal Qilindi
+                                </button>
+                            ` : `<span class="text-xs text-slate-500">Hal qilingan</span>`}
+                        </td>
+                    </tr>`;
+                }).join('');
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-rose-400">Yuklashda xatolik yuz berdi.</td></tr>`;
+            }
+        }
+
+        async function resolveReport(id) {
+            try {
+                let success = false;
+                try {
+                    const resLocal = await fetch(`${API_BASE}/api/v1/admin/reports/${id}/resolve`, {
+                        method: 'POST',
+                        headers: getAuthHeaders({ 'Content-Type': 'application/json' })
+                    });
+                    if (resLocal.ok) success = true;
+                } catch (e) {}
+
+                if (!success) {
+                    try {
+                        const res = await fetch(`${API_BASE_URL}/admin/reports/${id}/resolve`, {
+                            method: 'POST',
+                            headers: getAuthHeaders({ 'Content-Type': 'application/json' })
+                        });
+                        if (res.ok) success = true;
+                    } catch (e) {}
+                }
+
+                if (success) {
+                    showToast("Shikoyat holati 'RESOLVED' ga o'tkazildi!");
+                    await loadReports();
+                } else {
+                    showToast("Holatni o'zgartirishda xatolik!", 'error');
+                }
+            } catch (e) {
+                showToast("Server xatosi!", 'error');
+            }
+        }
+
+        // ==========================================
+        // 6. ANALYTICS DASHBOARD LOGIC
+        // ==========================================
+        async function loadAnalyticsDashboard() {
+            try {
+                let analyticsData = null;
+
+                // 1. Fetch from direct server API endpoint first (CORS error free)
+                try {
+                    const resLocal = await fetch(`${API_BASE}/api/v1/admin/analytics`, { headers: getAuthHeaders() });
+                    if (resLocal.ok && resLocal.headers.get('content-type')?.includes('application/json')) {
+                        const jsonLocal = await resLocal.json();
+                        analyticsData = jsonLocal.data || jsonLocal;
+                    }
+                } catch (e) {}
+
+                // 2. Secondary fallback to Railway domain if needed
+                if (!analyticsData) {
+                    try {
+                        const res = await fetch(`${API_BASE_URL}/admin/analytics`, { headers: getAuthHeaders() });
+                        if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
+                            const json = await res.json();
+                            analyticsData = json.data || json;
+                        }
+                    } catch (e) {}
+                }
+
+                if (!analyticsData) return;
+
+                const districts = analyticsData.districts || [];
+                const roomPrices = analyticsData.average_prices_by_rooms || {};
+                const uniDemand = analyticsData.university_demand || [];
+
+                // Render Room Prices KPI cards
+                const roomCardsContainer = document.getElementById('roomPricesCards');
+                if (roomCardsContainer) {
+                    roomCardsContainer.innerHTML = `
+                        <div class="glass-panel p-5 rounded-2xl border border-slate-800/80 shadow-xl">
+                            <div class="text-slate-400 text-xs font-semibold mb-1">1 Xonali Kvartiralar</div>
+                            <div class="text-2xl font-extrabold text-white font-heading">$${roomPrices['1_room'] || 270} <span class="text-xs text-slate-400 font-normal">/ oylik</span></div>
+                            <div class="text-[11px] text-emerald-400 font-medium mt-1">Talabalar uchun eng ommabop</div>
+                        </div>
+                        <div class="glass-panel p-5 rounded-2xl border border-slate-800/80 shadow-xl">
+                            <div class="text-slate-400 text-xs font-semibold mb-1">2 Xonali Kvartiralar</div>
+                            <div class="text-2xl font-extrabold text-white font-heading">$${roomPrices['2_rooms'] || 340} <span class="text-xs text-slate-400 font-normal">/ oylik</span></div>
+                            <div class="text-[11px] text-brand-400 font-medium mt-1">Aralash ijarachilar</div>
+                        </div>
+                        <div class="glass-panel p-5 rounded-2xl border border-slate-800/80 shadow-xl">
+                            <div class="text-slate-400 text-xs font-semibold mb-1">3 Xonali Kvartiralar</div>
+                            <div class="text-2xl font-extrabold text-white font-heading">$${roomPrices['3_rooms'] || 420} <span class="text-xs text-slate-400 font-normal">/ oylik</span></div>
+                            <div class="text-[11px] text-purple-400 font-medium mt-1">Yosh oilalar & guruhlar</div>
+                        </div>
+                        <div class="glass-panel p-5 rounded-2xl border border-slate-800/80 shadow-xl">
+                            <div class="text-slate-400 text-xs font-semibold mb-1">4+ Xonali Hovli/Kvartiralar</div>
+                            <div class="text-2xl font-extrabold text-white font-heading">$${roomPrices['4_plus_rooms'] || 550} <span class="text-xs text-slate-400 font-normal">/ oylik</span></div>
+                            <div class="text-[11px] text-amber-400 font-medium mt-1">Premium & hovli uylari</div>
+                        </div>
+                    `;
+                }
+
+                // Render Districts summary grid cards
+                const districtsGrid = document.getElementById('districtsGridCards');
+                if (districtsGrid) {
+                    districtsGrid.innerHTML = districts.map(d => `
+                        <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800 text-xs flex flex-col justify-between">
+                            <div class="font-bold text-white text-sm mb-1">${d.name}</div>
+                            <div class="text-brand-400 font-bold text-base mb-2">$${d.avg_price} <span class="text-[10px] text-slate-400 font-normal">avg</span></div>
+                            <div class="text-slate-400 text-[11px] flex justify-between border-t border-slate-800 pt-2">
+                                <span>Takliflar soni:</span>
+                                <span class="font-bold text-white">${d.count} ta</span>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+
+                renderDistrictChart(districts);
+                renderUniversityChart(uniDemand);
+            } catch (e) {
+                console.error("Analytics error:", e);
+            }
+        }
+
+        function renderDistrictChart(districts) {
+            const canvas = document.getElementById('districtChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            if (districtChartInstance) districtChartInstance.destroy();
+
+            const labels = districts.map(d => d.name);
+            const prices = districts.map(d => d.avg_price);
+            const counts = districts.map(d => d.count);
+
+            districtChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: "O'rtacha Narx ($ USD)",
+                            data: prices,
+                            backgroundColor: 'rgba(2, 132, 199, 0.7)',
+                            borderColor: '#0284c7',
+                            borderWidth: 1,
+                            borderRadius: 6
+                        },
+                        {
+                            label: "Takliflar Soni (E'lon)",
+                            data: counts,
+                            backgroundColor: 'rgba(168, 85, 247, 0.7)',
+                            borderColor: '#a855f7',
+                            borderWidth: 1,
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#94a3b8', font: { family: 'Inter', size: 11 } } }
+                    },
+                    scales: {
+                        x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#64748b', font: { size: 10 } } },
+                        y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#64748b' } }
+                    }
+                }
+            });
+        }
+
+        function renderUniversityChart(uniDemand) {
+            const canvas = document.getElementById('universityChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            if (universityChartInstance) universityChartInstance.destroy();
+
+            const labels = uniDemand.map(u => u.name);
+            const percentages = uniDemand.map(u => u.percentage);
+
+            const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981'];
+
+            universityChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: percentages,
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: '#0f172a'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    cutout: '68%'
+                }
+            });
+
+            const legendContainer = document.getElementById('universityLegendList');
+            if (legendContainer) {
+                legendContainer.innerHTML = uniDemand.map((u, idx) => `
+                    <div class="flex items-center justify-between text-slate-300">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full" style="background-color: ${colors[idx % colors.length]}"></span>
+                            <span class="truncate max-w-[180px]">${u.name}</span>
+                        </div>
+                        <span class="font-bold text-white font-mono">${u.percentage}% (${u.students} talaba)</span>
+                    </div>
+                `).join('');
             }
         }
     </script>
