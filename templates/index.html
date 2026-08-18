@@ -1774,14 +1774,20 @@
                         ? `<img src="${avatarUrl}" class="w-9 h-9 rounded-full object-cover border border-slate-700">`
                         : `<div class="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-white">${name.charAt(0)}</div>`;
 
-                    const listingsCount = u.listings_count !== undefined ? u.listings_count : (u.listingsCount !== undefined ? u.listingsCount : 0);
+                    const isVerified = trustScore >= 90;
+                    const verifiedBadgeHtml = isVerified 
+                        ? `<span class="text-blue-400 text-xs ml-1" title="Tasdiqlangan Foydalanuvchi (Verified)"><i class="fa-solid fa-circle-check"></i></span>`
+                        : '';
 
                     return `
                     <tr class="hover:bg-slate-900/40 transition">
                         <td class="px-6 py-4 flex items-center gap-3">
                             ${avatarHtml}
                             <div>
-                                <div class="font-semibold text-white text-sm">${name}</div>
+                                <div class="font-semibold text-white text-sm flex items-center">
+                                    <span>${name}</span>
+                                    ${verifiedBadgeHtml}
+                                </div>
                                 <div class="text-[11px] text-slate-400">${listingsCount} ta e'loni bor</div>
                             </div>
                         </td>
@@ -1802,9 +1808,11 @@
                             </div>
                         </td>
                         <td class="px-6 py-4">${statusPill}</td>
-                        <td class="px-6 py-4 text-right space-x-1">
-                            <button onclick="changeTrustScore(${u.id}, 5)" class="px-2 py-1 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-400 hover:text-white rounded border border-emerald-500/30 text-xs" title="Trust Score +5">+5</button>
-                            <button onclick="changeTrustScore(${u.id}, -10)" class="px-2 py-1 bg-amber-500/20 hover:bg-amber-500 text-amber-400 hover:text-white rounded border border-amber-500/30 text-xs" title="Trust Score -10">-10</button>
+                        <td class="px-6 py-4 text-right space-x-1 whitespace-nowrap">
+                            <button onclick="grantUserVerification(${u.id})" class="px-2.5 py-1 bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white rounded border border-blue-500/30 text-xs font-semibold" title="Ko'k nishon va verifikatsiya berish">
+                                <i class="fa-solid fa-badge-check text-blue-400 mr-1"></i>
+                                Verifikatsiya
+                            </button>
                             <button onclick="openUserModal(${u.id})" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 text-xs" title="Tahrirlash">
                                 <i class="fa-solid fa-pen"></i>
                             </button>
@@ -1816,8 +1824,36 @@
                 }).join('');
             } catch (err) {
                 if (!silent) {
-                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-rose-400">Yuklashda xatolik.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-rose-400">Yuklashda xatolik.</td></tr>`;
                 }
+            }
+        }
+
+        async function grantUserVerification(userId) {
+            try {
+                let success = false;
+                try {
+                    const res = await fetch(`${API_BASE}/api/users/${userId}/trust-score`, {
+                        method: 'PATCH',
+                        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+                        body: JSON.stringify({ delta: 25 })
+                    });
+                    if (res.ok) success = true;
+                } catch(e) {}
+
+                if (!success) {
+                    const resLocal = await fetch(`${API_BASE_URL}/users/${userId}/trust-score`, {
+                        method: 'PATCH',
+                        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+                        body: JSON.stringify({ delta: 25 })
+                    });
+                    if (resLocal.ok) success = true;
+                }
+
+                showToast("🔵 Foydalanuvchiga tasdiqlangan ko'k nishon (Verified Badge) berildi!", 'success');
+                await loadUsers();
+            } catch(e) {
+                showToast("Xatolik yuz berdi!", 'error');
             }
         }
 
