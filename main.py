@@ -401,6 +401,16 @@ def reject_listing_v1(
         "listing_id": listing.id
     }
 
+@app.delete("/api/v1/admin/listings/{listing_id}")
+@app.delete("/api/listings/{listing_id}")
+def delete_listing_endpoint(listing_id: int, db: Session = Depends(get_db)):
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="E'lon topilmadi")
+    db.delete(listing)
+    db.commit()
+    return {"status": "success", "message": "E'lon to'liq o'chirildi", "listing_id": listing_id}
+
 @app.get("/api/v1/users")
 def get_users_v1(
     role: Optional[str] = None,

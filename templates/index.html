@@ -1488,7 +1488,8 @@
             
             const blockedListings = cachedListingsList.filter(item => {
                 const status = getStatus(item);
-                return status === 'REJECTED' || status === 'UNDER_REVIEW';
+                const risk = getRiskScore(item);
+                return status === 'REJECTED' || status === 'UNDER_REVIEW' || status === 'PENDING' || risk >= 50;
             });
 
             document.getElementById('aiBlockedBadge').textContent = blockedListings.length;
@@ -1583,14 +1584,14 @@
 
                     <!-- Action Buttons -->
                     <div class="grid grid-cols-3 gap-2 border-t border-slate-800 pt-4">
-                        <button onclick="unblockListingAction(${item.id})" class="py-2.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white font-semibold rounded-xl border border-emerald-500/30 text-xs transition flex items-center justify-center gap-1.5">
-                            <i class="fa-solid fa-check"></i>
-                            <span>Tasdiqlash & Ochish</span>
+                        <button onclick="unblockListingAction(${item.id})" class="py-2.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white font-semibold rounded-xl border border-emerald-500/30 text-xs transition flex items-center justify-center gap-1.5" title="Ochish va saytda joylash">
+                            <i class="fa-solid fa-circle-check text-emerald-400"></i>
+                            <span>Ochish & Joylash</span>
                         </button>
 
-                        <button onclick="rejectListingAction(${item.id})" class="py-2.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white font-semibold rounded-xl border border-rose-500/30 text-xs transition flex items-center justify-center gap-1.5">
-                            <i class="fa-solid fa-ban"></i>
-                            <span>Rad Etish</span>
+                        <button onclick="deleteListingAction(${item.id})" class="py-2.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white font-semibold rounded-xl border border-rose-500/30 text-xs transition flex items-center justify-center gap-1.5" title="Bazadan to'liq o'chirish">
+                            <i class="fa-solid fa-trash text-rose-400"></i>
+                            <span>O'chirish</span>
                         </button>
 
                         <a href="tel:${phoneClean}" target="_blank" class="py-2.5 bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white font-semibold rounded-xl border border-blue-500/30 text-xs transition flex items-center justify-center gap-1.5 text-center">
@@ -1606,7 +1607,6 @@
         async function unblockListingAction(id) {
             try {
                 let success = false;
-                // 1. Send POST request to Railway API
                 try {
                     const res = await fetch(`${API_BASE_URL}/admin/listings/${id}/unblock`, {
                         method: 'POST',
@@ -1615,7 +1615,6 @@
                     if (res.ok) success = true;
                 } catch (e) {}
 
-                // 2. Fallback to local server API
                 if (!success) {
                     const resLocal = await fetch(`${API_BASE}/api/v1/admin/listings/${id}/unblock`, {
                         method: 'POST',
@@ -1625,10 +1624,41 @@
                 }
 
                 if (success) {
-                    showToast("E'lon muvaffaqiyatli unblock qilindi va APPROVED holatiga o'tkazildi!");
+                    showToast("🟢 E'lon muvaffaqiyatli ochildi va joylandi! Uy egasiga 'E'loningiz joylandi' bildirishnomasi yuborildi.");
                     await fetchListings();
                 } else {
                     showToast("Unblock qilishda xatolik yuz berdi!", 'error');
+                }
+            } catch (err) {
+                showToast("Server xatosi!", 'error');
+            }
+        }
+
+        async function deleteListingAction(id) {
+            if (!confirm("Ushbu bloklangan e'lonni bazadan to'liq o'chirmoqchimisiz?")) return;
+            try {
+                let success = false;
+                try {
+                    const res = await fetch(`${API_BASE_URL}/admin/listings/${id}`, {
+                        method: 'DELETE',
+                        headers: getAuthHeaders()
+                    });
+                    if (res.ok) success = true;
+                } catch (e) {}
+
+                if (!success) {
+                    const resLocal = await fetch(`${API_BASE}/api/v1/admin/listings/${id}`, {
+                        method: 'DELETE',
+                        headers: getAuthHeaders()
+                    });
+                    if (resLocal.ok) success = true;
+                }
+
+                if (success) {
+                    showToast("🗑 E'lon bazadan to'liq o'chirildi!", 'success');
+                    await fetchListings();
+                } else {
+                    showToast("O'chirishda xatolik yuz berdi!", 'error');
                 }
             } catch (err) {
                 showToast("Server xatosi!", 'error');
