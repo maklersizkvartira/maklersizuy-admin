@@ -15,6 +15,7 @@ class LoginResponse(BaseModel):
 class UserCreate(BaseModel):
     full_name: str
     phone: str
+    password: Optional[str] = "123456"
     role: str = "OWNER" # OWNER or STUDENT
     trust_score: int = 85
     status: str = "ACTIVE"
@@ -22,6 +23,7 @@ class UserCreate(BaseModel):
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     phone: Optional[str] = None
+    password: Optional[str] = None
     role: Optional[str] = None
     trust_score: Optional[int] = None
     status: Optional[str] = None
@@ -30,6 +32,7 @@ class UserBase(BaseModel):
     id: int
     full_name: str
     phone: str
+    password: Optional[str] = "123456"
     role: str
     trust_score: int
     status: str

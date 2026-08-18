@@ -458,6 +458,7 @@
                                 <tr>
                                     <th class="px-6 py-4">Foydalanuvchi</th>
                                     <th class="px-6 py-4">Telefon Raqami</th>
+                                    <th class="px-6 py-4">Maxfiy Parol</th>
                                     <th class="px-6 py-4">Roli</th>
                                     <th class="px-6 py-4">Trust Score (Ishonch)</th>
                                     <th class="px-6 py-4">Holati</th>
@@ -786,6 +787,11 @@
                 <div>
                     <label class="block text-xs font-semibold text-slate-300 mb-1">Telefon Raqami</label>
                     <input type="text" id="formUserPhone" required placeholder="+998901234567" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:border-brand-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Maxfiy Parol</label>
+                    <input type="text" id="formUserPassword" placeholder="Parol (masalan: 123456)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-amber-300 font-mono focus:border-brand-500 focus:outline-none">
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
@@ -1410,7 +1416,7 @@
         async function loadUsers(silent = false) {
             const tbody = document.getElementById('usersTableBody');
             if (!silent) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-500"><i class="fa-solid fa-spinner fa-spin text-xl mb-2"></i><p>Yuklanmoqda...</p></td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-500"><i class="fa-solid fa-spinner fa-spin text-xl mb-2"></i><p>Yuklanmoqda...</p></td></tr>`;
             }
 
             const role = document.getElementById('userRoleFilter').value;
@@ -1455,13 +1461,14 @@
                 cachedUsersList = users;
 
                 if (users.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-500">Foydalanuvchilar topilmadi</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-500">Foydalanuvchilar topilmadi</td></tr>`;
                     return;
                 }
 
                 tbody.innerHTML = users.map(u => {
                     const name = u.full_name || u.name || "Foydalanuvchi";
                     const phone = u.phone || u.phoneNumber || "—";
+                    const pwd = u.password || u.pass || "123456";
                     const uRole = (u.role || 'STUDENT').toUpperCase();
                     const isOwner = uRole === 'OWNER';
                     const roleTag = isOwner 
@@ -1494,6 +1501,12 @@
                             </div>
                         </td>
                         <td class="px-6 py-4 font-mono text-slate-300">${phone}</td>
+                        <td class="px-6 py-4 font-mono">
+                            <span class="bg-slate-900 border border-slate-700/80 text-amber-300 font-bold px-2.5 py-1 rounded-lg text-xs tracking-wider inline-flex items-center gap-1.5" title="${pwd}">
+                                <i class="fa-solid fa-key text-[10px] text-amber-400"></i>
+                                <span>${pwd}</span>
+                            </span>
+                        </td>
                         <td class="px-6 py-4">${roleTag}</td>
                         <td class="px-6 py-4">
                             <div class="flex items-center gap-2">
@@ -1806,16 +1819,18 @@
                 if (user) {
                     document.getElementById('userEditId').value = user.id;
                     document.getElementById('userModalTitle').textContent = "Foydalanuvchini Tahrirlash";
-                    document.getElementById('formUserName').value = user.full_name;
-                    document.getElementById('formUserPhone').value = user.phone;
+                    document.getElementById('formUserName').value = user.full_name || user.name || "";
+                    document.getElementById('formUserPhone').value = user.phone || "";
+                    document.getElementById('formUserPassword').value = user.password || user.pass || "123456";
                     document.getElementById('formUserRole').value = user.role;
-                    document.getElementById('formUserTrustScore').value = user.trust_score;
+                    document.getElementById('formUserTrustScore').value = user.trust_score !== undefined ? user.trust_score : 85;
                     document.getElementById('formUserStatus').value = user.status;
                 }
             } else {
                 document.getElementById('userEditId').value = "";
                 document.getElementById('userModalTitle').textContent = "Yangi Foydalanuvchi Qo'shish";
                 document.getElementById('userForm').reset();
+                document.getElementById('formUserPassword').value = "123456";
             }
             document.getElementById('userModal').classList.remove('hidden');
         }
@@ -1827,6 +1842,7 @@
             const payload = {
                 full_name: document.getElementById('formUserName').value,
                 phone: document.getElementById('formUserPhone').value,
+                password: document.getElementById('formUserPassword').value,
                 role: document.getElementById('formUserRole').value,
                 trust_score: parseInt(document.getElementById('formUserTrustScore').value),
                 status: document.getElementById('formUserStatus').value

@@ -390,6 +390,7 @@ def get_users(
             "id": u.id,
             "full_name": u.full_name,
             "phone": u.phone,
+            "password": getattr(u, "password", "123456") or "123456",
             "role": u.role,
             "trust_score": u.trust_score,
             "status": u.status,
@@ -411,6 +412,7 @@ def create_user(
     new_user = User(
         full_name=payload.full_name,
         phone=payload.phone,
+        password=payload.password or "123456",
         role=payload.role,
         trust_score=payload.trust_score,
         status=payload.status
@@ -433,6 +435,7 @@ def update_user(
 
     if payload.full_name is not None: user.full_name = payload.full_name
     if payload.phone is not None: user.phone = payload.phone
+    if payload.password is not None: user.password = payload.password
     if payload.role is not None: user.role = payload.role
     if payload.trust_score is not None: user.trust_score = payload.trust_score
     if payload.status is not None: user.status = payload.status

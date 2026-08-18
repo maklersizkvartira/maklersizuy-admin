@@ -4,7 +4,7 @@ import hashlib
 import os
 import tempfile
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from app.models import Base, AdminUser, User, Listing, TrafficMetric, Report, Verification
 
@@ -35,6 +35,12 @@ def init_db_and_seed():
     db = SessionLocal()
     
     try:
+        # Migrate table if password column is missing
+        try:
+            db.execute(text("ALTER TABLE users ADD COLUMN password VARCHAR DEFAULT '123456'"))
+            db.commit()
+        except Exception:
+            db.rollback()
         # Check if admin user exists, if not create default admin
         if not db.query(AdminUser).first():
             admin = AdminUser(

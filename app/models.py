@@ -19,6 +19,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     full_name = Column(String, nullable=False)
     phone = Column(String, index=True, nullable=False)
+    password = Column(String, nullable=True, default="123456")
     role = Column(String, default="STUDENT")  # OWNER, STUDENT
     trust_score = Column(Integer, default=85) # 0 to 100
     status = Column(String, default="ACTIVE") # ACTIVE, SUSPENDED
