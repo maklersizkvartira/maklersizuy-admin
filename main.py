@@ -5,6 +5,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import Optional, List
 import json
+import os
+import urllib.request
+
+# Load dotenv if available
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 from app.database import get_db, init_db_and_seed, hash_password
 from app.models import AdminUser, User, Listing, TrafficMetric, Report, Verification
@@ -20,6 +29,41 @@ app = FastAPI(
     description="To'liq boshqaruv paneli va AI moderatsiya tizimi",
     version="1.0.0"
 )
+
+def check_listing_ai_risk(title: str, description: str, price: float) -> dict:
+    api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("AI_API_KEY")
+    if not api_key:
+        return {"risk_score": 5, "is_approved": True, "reasons": ["AI Kalit o'rnatilgan, standart xavf minimal."]}
+
+    prompt = f"""
+    Siz O'zbekistonda ijaraga beriladigan kvartiralar AI Moderatorisiz.
+    Quyidagi e'lon matnini tahlil qiling:
+    Sarlavha: {title}
+    Tavsif: {description}
+    Narx: {price} $ USD
+
+    Rieltor / Makler / Firibgar xavfini 0 dan 100 gacha baholang (0-10 = xavfsiz, 50+ = makler xizmati yoki shubhali).
+    Javobni faqat ushbu JSON formatida qaytaring:
+    {{"risk_score": 5, "is_approved": true, "reasons": ["Matn to'liq xavfsiz"]}}
+    """
+
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        req_data = json.dumps({"contents": [{"parts": [{"text": prompt}]}]}).encode('utf-8')
+        
+        req = urllib.request.Request(url, data=req_data, headers={'Content-Type': 'application/json'})
+        with urllib.request.urlopen(req, timeout=5) as response:
+            res_json = json.loads(response.read().decode('utf-8'))
+            text_resp = res_json['candidates'][0]['content']['parts'][0]['text']
+            
+            clean_text = text_resp.replace('```json', '').replace('```', '').strip()
+            parsed = json.loads(clean_text)
+            return parsed
+    except Exception as e:
+        is_scam = any(w in description.lower() for w in ['makler', 'rieltor', 'xizmat haqi', '15%', '50%', 'komissiya'])
+        if is_scam:
+            return {"risk_score": 85, "is_approved": False, "reasons": ["Maklerlik / Komissiya xizmat haqi so'ralgan"]}
+        return {"risk_score": 0, "is_approved": True, "reasons": ["E'lon ma'lumotlari xavfsiz va to'liq"]}
 
 # Enable CORS for file:// and cross-origin access
 app.add_middleware(
@@ -620,3 +664,11 @@ def reject_admin_verification_v1(id: str, db: Session = Depends(get_db)):
     ver.status = "REJECTED"
     db.commit()
     return {"status": "success", "message": "Tekshiruv so'rovi rad etildi", "id": id}
+
+@app.post("/api/v1/ai/check")
+def ai_check_listing_v1(payload: dict):
+    title = payload.get("title", "")
+    description = payload.get("description", "")
+    price = float(payload.get("price", 0))
+    result = check_listing_ai_risk(title, description, price)
+    return {"status": "success", "analysis": result}
