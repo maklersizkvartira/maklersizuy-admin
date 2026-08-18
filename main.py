@@ -672,3 +672,39 @@ def ai_check_listing_v1(payload: dict):
     price = float(payload.get("price", 0))
     result = check_listing_ai_risk(title, description, price)
     return {"status": "success", "analysis": result}
+
+@app.get("/api/v1/admin/ai-assistant-summary")
+def get_ai_assistant_summary(db: Session = Depends(get_db)):
+    total_listings = db.query(Listing).count()
+    blocked_listings = db.query(Listing).filter(Listing.status == 'REJECTED').count()
+    total_users = db.query(User).count()
+    pending_verifications = db.query(Verification).filter(Verification.status == 'PENDING').count()
+    
+    api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("AI_API_KEY")
+    if api_key:
+        prompt = f"""
+        Siz Maklersiz.uz platformasining Bosh AI Admin Yordamchisisiz.
+        Platformadagi so'nggi statistika:
+        - Jami e'lonlar: {total_listings} ta
+        - AI bloklagan makler/firibgar e'lonlar: {blocked_listings} ta
+        - Foydalanuvchilar: {total_users} ta
+        - Kutilayotgan verification hujjatlari: {pending_verifications} ta
+        
+        Admin uchun 2-3 cümlalik qisqa, aqlli va motivatsion kunlik AI xulosasini o'zbek tilida yozing.
+        Javob faqat oddiy matn bo'lsin, boshqa hech narsa qo'shmang.
+        """
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+            req_data = json.dumps({"contents": [{"parts": [{"text": prompt}]}]}).encode('utf-8')
+            req = urllib.request.Request(url, data=req_data, headers={'Content-Type': 'application/json'})
+            with urllib.request.urlopen(req, timeout=5) as response:
+                res_json = json.loads(response.read().decode('utf-8'))
+                ai_text = res_json['candidates'][0]['content']['parts'][0]['text'].strip()
+                return {"status": "success", "summary": ai_text}
+        except Exception as e:
+            pass
+
+    return {
+        "status": "success",
+        "summary": f"🤖 Shield AI Hisoboti: Platformada {total_listings} ta e'lon faol skaner qilindi. {blocked_listings} ta makler va shubhali so'rov avtomatik filtrlandi. {pending_verifications} ta verification hujjatlari ko'rib chiqishga tayyor."
+    }

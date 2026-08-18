@@ -234,6 +234,28 @@
             </div>
         </div>
 
+        <!-- 🤖 AI ADMIN ASSISTANT BANNER WIDGET -->
+        <div class="max-w-7xl mx-auto px-6 pt-4">
+            <div class="bg-gradient-to-r from-emerald-950/80 via-slate-900 to-indigo-950/80 border border-emerald-500/30 rounded-2xl p-4 shadow-2xl flex items-center gap-4 text-xs">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0 animate-pulse text-lg">
+                    <i class="fa-solid fa-robot"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-0.5">
+                        <span class="font-extrabold text-white uppercase text-[10px] tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">AI ADMIN ASSISTANT</span>
+                        <span class="text-[10px] text-slate-400 font-mono">Gemini 1.5 Flash • Live</span>
+                    </div>
+                    <p id="aiAssistantSummaryText" class="text-slate-200 font-medium leading-relaxed">
+                        🤖 Shield AI Hisoboti: Skaner tayyorlanmoqda...
+                    </p>
+                </div>
+                <button onclick="loadAiAssistantSummary()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 text-xs transition flex items-center gap-1 shrink-0">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span class="hidden sm:inline">Yangilash</span>
+                </button>
+            </div>
+        </div>
+
         <!-- CONTENT MAIN AREA -->
         <main class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
 
@@ -920,7 +942,37 @@
         document.addEventListener('DOMContentLoaded', () => {
             startClock();
             checkAuth();
+            loadAiAssistantSummary();
         });
+
+        async function loadAiAssistantSummary() {
+            const summaryElem = document.getElementById('aiAssistantSummaryText');
+            if (!summaryElem) return;
+            try {
+                let summary = "";
+                try {
+                    const resLocal = await fetch(`${API_BASE}/api/v1/admin/ai-assistant-summary`, { headers: getAuthHeaders() });
+                    if (resLocal.ok) {
+                        const json = await resLocal.json();
+                        summary = json.summary || "";
+                    }
+                } catch (e) {}
+
+                if (!summary) {
+                    try {
+                        const res = await fetch(`${API_BASE_URL}/admin/ai-assistant-summary`, { headers: getAuthHeaders() });
+                        if (res.ok) {
+                            const json = await res.json();
+                            summary = json.summary || "";
+                        }
+                    } catch (e) {}
+                }
+
+                if (summary) {
+                    summaryElem.textContent = summary;
+                }
+            } catch (e) {}
+        }
 
         function showToast(message, type = 'success') {
             const container = document.getElementById('toastContainer');
