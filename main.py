@@ -157,6 +157,24 @@ def get_dashboard_stats(db: Session = Depends(get_db), admin: AdminUser = Depend
     ai_rejected_count = blocked_listings
     admin_unblocked_count = db.query(Listing).filter(Listing.status == "APPROVED", Listing.ai_risk_score >= 50).count()
 
+    # Calculate new metrics requested by the user
+    # Users with at least one listing
+    users_with_listings = db.query(Listing.owner_id).distinct().count()
+    
+    # Total registered users
+    total_registered_users = db.query(User).count()
+    
+    # Guest visitors (today)
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_guest_visitors = db.query(GuestVisit.session_id).filter(GuestVisit.visited_at >= today_start).distinct().count()
+    
+    # Daily Shield AI requests (today's metric)
+    today_date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today_metric = db.query(TrafficMetric).filter(TrafficMetric.date == today_date_str).first()
+    shield_ai_daily_requests = 0
+    if today_metric:
+        shield_ai_daily_requests = today_metric.ai_auto_approved + today_metric.ai_flagged
+
     return {
         "daily_visitors": total_visitors_latest,
         "total_owners": total_owners,
@@ -170,6 +188,10 @@ def get_dashboard_stats(db: Session = Depends(get_db), admin: AdminUser = Depend
         "ai_auto_approved": ai_auto_approved,
         "ai_rejected_count": ai_rejected_count,
         "admin_unblocked_count": admin_unblocked_count,
+        "users_with_listings": users_with_listings,
+        "total_registered_users": total_registered_users,
+        "today_guest_visitors": today_guest_visitors,
+        "shield_ai_daily_requests": shield_ai_daily_requests,
         "traffic_history": traffic_history
     }
 
