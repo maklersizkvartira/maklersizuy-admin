@@ -367,9 +367,18 @@
         }
 
         async function refreshData() {
-            const activeTab = document.querySelector('.tab-btn.active').id.replace('tab-', '');
-            if(activeTab === 'dashboard') await loadDashboard();
-            if(activeTab === 'users') await loadUsers();
+            const btnIcon = document.querySelector('button[onclick="refreshData()"] i');
+            if (btnIcon) btnIcon.classList.add('fa-spin');
+            
+            try {
+                const activeTab = document.querySelector('.tab-btn.active').id.replace('tab-', '');
+                if(activeTab === 'dashboard') await loadDashboard();
+                if(activeTab === 'users') await loadUsers();
+            } catch (err) {
+                console.error("Refresh error:", err);
+            } finally {
+                if (btnIcon) btnIcon.classList.remove('fa-spin');
+            }
         }
 
         async function loadDashboard() {
