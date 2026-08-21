@@ -383,7 +383,7 @@
 
         async function loadDashboard() {
             try {
-                const res = await fetch('/api/v1/admin/stats');
+                const res = await fetch('https://maklersizkvartira-production.up.railway.app/api/v1/admin/stats');
                 if(res.ok) {
                     const response = await res.json();
                     if (response.status === 'success' && response.data) {
@@ -401,7 +401,7 @@
 
         async function loadUsers() {
             try {
-                const res = await fetch('/api/v1/admin/users');
+                const res = await fetch('https://maklersizkvartira-production.up.railway.app/api/v1/admin/users');
                 if(res.ok) {
                     const response = await res.json();
                     if (response.status === 'success' && response.data) {
