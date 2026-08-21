@@ -383,14 +383,16 @@
 
         async function loadDashboard() {
             try {
-                const res = await fetch(`${API_URL}/dashboard/stats`);
+                const res = await fetch('/api/v1/admin/stats');
                 if(res.ok) {
-                    const data = await res.json();
-                    
-                    animateValue('valTotalUsers', data.total_registered_users || data.total_owners + data.total_students || 0);
-                    animateValue('valUsersWithListings', data.users_with_listings || 0);
-                    animateValue('valGuestVisitors', data.today_guest_visitors || 0);
-                    animateValue('valAiRequests', data.shield_ai_daily_requests || 0);
+                    const response = await res.json();
+                    if (response.status === 'success' && response.data) {
+                        const data = response.data;
+                        animateValue('valTotalUsers', data.tenants || 0);
+                        animateValue('valUsersWithListings', data.owners || 0);
+                        animateValue('valGuestVisitors', data.guests || 0);
+                        animateValue('valAiRequests', data.aiQueries || 0);
+                    }
                 }
             } catch (err) {
                 console.error("Dashboard error:", err);
@@ -399,10 +401,12 @@
 
         async function loadUsers() {
             try {
-                const res = await fetch(`${API_URL}/users`);
+                const res = await fetch('/api/v1/admin/users');
                 if(res.ok) {
-                    const users = await res.json();
-                    renderUsersTable(users);
+                    const response = await res.json();
+                    if (response.status === 'success' && response.data) {
+                        renderUsersTable(response.data);
+                    }
                 }
             } catch (err) {
                 console.error("Users error:", err);
@@ -414,17 +418,11 @@
             tbody.innerHTML = '';
             
             users.forEach(u => {
-                // If password is the default "123456" or empty, it's likely a Google Login (or dummy).
-                const isGoogle = u.password === '123456' || !u.password;
-                const pwdDisplay = isGoogle 
-                    ? `<span class="bg-slate-800 text-slate-400 text-[10px] px-2 py-1 rounded-md font-mono border border-slate-700"><i class="fa-brands fa-google mr-1"></i> Google Oauth</span>` 
-                    : `<span class="font-mono text-slate-300 bg-slate-800/50 px-2 py-1 rounded border border-slate-700/50">${u.password}</span>`;
+                // Since passwords are not stored, we display the auth type if available or just empty/default
+                const pwdDisplay = `<span class="bg-slate-800 text-slate-400 text-[10px] px-2 py-1 rounded-md font-mono border border-slate-700">Tizim orqali</span>`;
                 
-                const nameDisplay = isGoogle 
-                    ? `<div class="font-bold text-white flex items-center gap-2">${u.full_name} <i class="fa-brands fa-google text-[10px] text-blue-400" title="Google orqali kirdi"></i></div>` 
-                    : `<div class="font-bold text-white">${u.full_name}</div>`;
-
-                const date = u.created_at ? new Date(u.created_at).toLocaleDateString('uz-UZ') : 'Noma\'lum';
+                const nameDisplay = `<div class="font-bold text-white">${u.name}</div>`;
+                const date = u.createdAt ? new Date(u.createdAt).toLocaleDateString('uz-UZ') : 'Noma\'lum';
                 
                 const tr = document.createElement('tr');
                 tr.className = 'table-row-hover transition-colors border-b border-slate-800/50 last:border-0';
@@ -432,7 +430,7 @@
                     <td class="px-6 py-4">
                         <div class="flex items-center gap-3">
                             <div class="w-8 h-8 rounded-full bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-400 font-bold uppercase">
-                                ${u.full_name.charAt(0)}
+                                ${u.name ? u.name.charAt(0) : '?'}
                             </div>
                             <div>
                                 ${nameDisplay}
@@ -444,7 +442,7 @@
                     <td class="px-6 py-4">${pwdDisplay}</td>
                     <td class="px-6 py-4">
                         <span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2.5 py-0.5 rounded-full text-xs font-bold">
-                            ${u.listings_count} ta e'lon
+                            ${u.listingsCount || 0} ta e'lon
                         </span>
                     </td>
                     <td class="px-6 py-4 text-right text-xs text-slate-500">${date}</td>
