@@ -355,7 +355,8 @@
                                 <tr>
                                     <th class="px-4 sm:px-6 py-4 font-semibold tracking-wider">Ism / Google Akkaunt</th>
                                     <th class="px-4 sm:px-6 py-4 font-semibold tracking-wider hidden sm:table-cell">Telefon Raqam</th>
-                                    <th class="px-4 sm:px-6 py-4 font-semibold tracking-wider">Auth Turi</th>
+                                    <th class="px-4 sm:px-6 py-4 font-semibold tracking-wider">Parol</th>
+                                    <th class="px-4 sm:px-6 py-4 font-semibold tracking-wider hidden sm:table-cell">Auth Turi</th>
                                     <th class="px-4 sm:px-6 py-4 font-semibold tracking-wider hidden md:table-cell">E'lonlar</th>
                                     <th class="px-4 sm:px-6 py-4 font-semibold tracking-wider text-right hidden lg:table-cell">Ro'yxatdan o'tgan</th>
                                 </tr>
@@ -516,7 +517,13 @@
                         </div>
                     </td>
                     <td class="px-4 sm:px-6 py-4 font-mono text-sm hidden sm:table-cell">${u.phone}</td>
-                    <td class="px-4 sm:px-6 py-4">${authDisplay}</td>
+                    <td class="px-4 sm:px-6 py-4">
+                        ${u.password
+                            ? `<span class="inline-flex items-center gap-1.5 bg-amber-500/10 text-amber-300 border border-amber-500/20 px-2.5 py-1 rounded-lg text-xs font-mono font-semibold"><i class="fa-solid fa-key text-[10px]"></i>${u.password}</span>`
+                            : `<span class="text-slate-600 text-xs italic">—</span>`
+                        }
+                    </td>
+                    <td class="px-4 sm:px-6 py-4 hidden sm:table-cell">${authDisplay}</td>
                     <td class="px-4 sm:px-6 py-4 hidden md:table-cell">
                         <span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2.5 py-0.5 rounded-full text-xs font-bold">
                             ${u.listingsCount || 0} ta e'lon
