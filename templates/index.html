@@ -94,6 +94,16 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+        /* Mobile sidebar overlay */
+        #sidebarOverlay { display: none; }
+        #sidebarOverlay.open { display: block; }
+        #mobileSidebar { transform: translateX(-100%); transition: transform 0.3s ease; }
+        #mobileSidebar.open { transform: translateX(0); }
+
+        @media (max-width: 768px) {
+            #sec-dashboard, #sec-users { padding: 1rem !important; }
+        }
     </style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden antialiased selection:bg-brand-500 selection:text-white">
@@ -136,6 +146,45 @@
         </div>
     </div>
 
+    <!-- MOBILE SIDEBAR OVERLAY -->
+    <div id="sidebarOverlay" class="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm" onclick="closeMobileSidebar()"></div>
+
+    <!-- MOBILE SIDEBAR -->
+    <aside id="mobileSidebar" class="fixed inset-y-0 left-0 z-40 w-72 glass-panel border-r border-slate-800/50 flex flex-col justify-between py-6 md:hidden">
+        <div>
+            <div class="flex items-center justify-between px-6 mb-10">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-brand-500 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/30">
+                        <i class="fa-solid fa-bolt text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-heading font-bold text-white tracking-wide">Maklersiz<span class="text-brand-500">.</span></h1>
+                        <p class="text-[10px] text-brand-400 font-bold uppercase tracking-widest mt-0.5">Admin Control</p>
+                    </div>
+                </div>
+                <button onclick="closeMobileSidebar()" class="w-8 h-8 bg-slate-800 rounded-lg flex items-center justify-center text-slate-400">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <nav class="space-y-2 flex flex-col">
+                <div class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 px-8 mb-3 mt-4">Asosiy Menu</div>
+                <button onclick="switchTab('dashboard'); closeMobileSidebar()" id="mob-tab-dashboard" class="tab-btn active w-full text-left px-8 py-3.5 text-sm transition flex items-center gap-3 text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-chart-pie w-5 text-center"></i>
+                    <span>Asosiy Panel</span>
+                </button>
+                <button onclick="switchTab('users'); closeMobileSidebar()" id="mob-tab-users" class="tab-btn w-full text-left px-8 py-3.5 text-sm transition flex items-center gap-3 text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-users w-5 text-center"></i>
+                    <span>Foydalanuvchilar</span>
+                </button>
+            </nav>
+        </div>
+        <div class="px-6">
+            <button onclick="handleLogout()" class="w-full py-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl border border-rose-500/20 transition flex items-center justify-center gap-2 text-sm font-semibold">
+                <i class="fa-solid fa-power-off"></i> Tizimdan Chiqish
+            </button>
+        </div>
+    </aside>
+
     <div id="appContainer" class="flex-1 flex min-h-screen hidden">
         
         <!-- SIDEBAR -->
@@ -177,9 +226,13 @@
         <main class="flex-1 flex flex-col min-w-0 relative">
             
             <!-- HEADER -->
-            <header class="glass-panel sticky top-0 z-30 border-b border-slate-800/50 px-8 py-5 flex items-center justify-between">
+            <header class="glass-panel sticky top-0 z-30 border-b border-slate-800/50 px-4 sm:px-8 py-4 sm:py-5 flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <h2 id="pageTitle" class="text-xl font-heading font-bold text-white">Asosiy Panel</h2>
+                    <!-- Mobile hamburger -->
+                    <button onclick="openMobileSidebar()" class="md:hidden w-9 h-9 bg-slate-800/50 rounded-lg flex items-center justify-center text-slate-300 hover:text-white transition mr-1">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <h2 id="pageTitle" class="text-lg sm:text-xl font-heading font-bold text-white">Asosiy Panel</h2>
                 </div>
                 <div class="flex items-center gap-4">
                     <button onclick="refreshData()" class="w-10 h-10 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 rounded-xl flex items-center justify-center text-slate-300 transition active:scale-95">
@@ -300,11 +353,11 @@
                         <table class="w-full text-left text-sm text-slate-300">
                             <thead class="text-xs text-slate-400 uppercase bg-slate-800/50 sticky top-0 z-10 backdrop-blur-md">
                                 <tr>
-                                    <th class="px-6 py-4 font-semibold tracking-wider">Ism / Google Akkaunt</th>
-                                    <th class="px-6 py-4 font-semibold tracking-wider">Telefon Raqam</th>
-                                    <th class="px-6 py-4 font-semibold tracking-wider">Parol</th>
-                                    <th class="px-6 py-4 font-semibold tracking-wider">E'lonlar</th>
-                                    <th class="px-6 py-4 font-semibold tracking-wider text-right">Ro'yxatdan o'tgan</th>
+                                    <th class="px-4 sm:px-6 py-4 font-semibold tracking-wider">Ism / Google Akkaunt</th>
+                                    <th class="px-4 sm:px-6 py-4 font-semibold tracking-wider hidden sm:table-cell">Telefon Raqam</th>
+                                    <th class="px-4 sm:px-6 py-4 font-semibold tracking-wider">Auth Turi</th>
+                                    <th class="px-4 sm:px-6 py-4 font-semibold tracking-wider hidden md:table-cell">E'lonlar</th>
+                                    <th class="px-4 sm:px-6 py-4 font-semibold tracking-wider text-right hidden lg:table-cell">Ro'yxatdan o'tgan</th>
                                 </tr>
                             </thead>
                             <tbody id="usersTableBody" class="divide-y divide-slate-800/50">
@@ -325,6 +378,12 @@
         function switchTab(tabId) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(`tab-${tabId}`).classList.add('active');
+            // Also update mobile sidebar active state
+            const mobTab = document.getElementById(`mob-tab-${tabId}`);
+            if (mobTab) {
+                document.querySelectorAll('#mobileSidebar .tab-btn').forEach(b => b.classList.remove('active'));
+                mobTab.classList.add('active');
+            }
             
             document.getElementById('sec-dashboard').classList.add('hidden');
             document.getElementById('sec-users').classList.add('hidden');
@@ -335,6 +394,15 @@
             
             if (tabId === 'dashboard') loadDashboard();
             if (tabId === 'users') loadUsers();
+        }
+
+        function openMobileSidebar() {
+            document.getElementById('mobileSidebar').classList.add('open');
+            document.getElementById('sidebarOverlay').classList.add('open');
+        }
+        function closeMobileSidebar() {
+            document.getElementById('mobileSidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('open');
         }
 
         async function handleLogin(e) {
@@ -418,18 +486,20 @@
             tbody.innerHTML = '';
             
             users.forEach(u => {
-                // Since passwords are not stored, we display the auth type if available or just empty/default
-                const pwdDisplay = `<span class="bg-slate-800 text-slate-400 text-[10px] px-2 py-1 rounded-md font-mono border border-slate-700">Tizim orqali</span>`;
+                const isGoogle = u.authType === 'Google';
+                const authDisplay = isGoogle
+                    ? `<span class="inline-flex items-center gap-1.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2.5 py-1 rounded-full text-xs font-semibold"><i class="fa-brands fa-google text-[10px]"></i>Google</span>`
+                    : `<span class="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full text-xs font-semibold"><i class="fa-solid fa-mobile-screen-button text-[10px]"></i>Telefon</span>`;
                 
                 const nameDisplay = `<div class="font-bold text-white">${u.name}</div>`;
-                const date = u.createdAt ? new Date(u.createdAt).toLocaleDateString('uz-UZ') : 'Noma\'lum';
+                const date = u.createdAt ? new Date(u.createdAt).toLocaleDateString('uz-UZ') : "Noma'lum";
                 
                 const tr = document.createElement('tr');
                 tr.className = 'table-row-hover transition-colors border-b border-slate-800/50 last:border-0';
                 tr.innerHTML = `
-                    <td class="px-6 py-4">
+                    <td class="px-4 sm:px-6 py-4">
                         <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-400 font-bold uppercase">
+                            <div class="w-8 h-8 rounded-full bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-400 font-bold uppercase shrink-0">
                                 ${u.name ? u.name.charAt(0) : '?'}
                             </div>
                             <div>
@@ -438,18 +508,19 @@
                             </div>
                         </div>
                     </td>
-                    <td class="px-6 py-4 font-mono text-sm">${u.phone}</td>
-                    <td class="px-6 py-4">${pwdDisplay}</td>
-                    <td class="px-6 py-4">
+                    <td class="px-4 sm:px-6 py-4 font-mono text-sm hidden sm:table-cell">${u.phone}</td>
+                    <td class="px-4 sm:px-6 py-4">${authDisplay}</td>
+                    <td class="px-4 sm:px-6 py-4 hidden md:table-cell">
                         <span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2.5 py-0.5 rounded-full text-xs font-bold">
                             ${u.listingsCount || 0} ta e'lon
                         </span>
                     </td>
-                    <td class="px-6 py-4 text-right text-xs text-slate-500">${date}</td>
+                    <td class="px-4 sm:px-6 py-4 text-right text-xs text-slate-500 hidden lg:table-cell">${date}</td>
                 `;
                 tbody.appendChild(tr);
             });
-        }
+
+
 
         document.getElementById('userSearch').addEventListener('input', (e) => {
             const term = e.target.value.toLowerCase();
