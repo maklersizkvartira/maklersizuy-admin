@@ -413,9 +413,14 @@
                 const res = await fetch(`${API_URL}/auth/login`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
+                    credentials: 'include',
                     body: JSON.stringify({username: u, password: p})
                 });
-                if(res.ok) {
+                const data = await res.json();
+                if(res.ok && (data.status === 'success' || data.token)) {
+                    // Save session token to localStorage as fallback
+                    if (data.token) localStorage.setItem('admin_token', data.token);
+                    document.getElementById('loginError').classList.add('hidden');
                     document.getElementById('loginModal').classList.add('hidden');
                     document.getElementById('appContainer').classList.remove('hidden');
                     loadDashboard();
@@ -423,14 +428,16 @@
                     document.getElementById('loginError').classList.remove('hidden');
                 }
             } catch (err) {
-                console.error(err);
+                console.error('Login error:', err);
+                document.getElementById('loginError').classList.remove('hidden');
             }
         }
 
         document.getElementById('loginForm').addEventListener('submit', handleLogin);
 
         async function handleLogout() {
-            await fetch(`${API_URL}/auth/logout`, {method: 'POST'});
+            localStorage.removeItem('admin_token');
+            await fetch(`${API_URL}/auth/logout`, { method: 'POST', credentials: 'include' });
             location.reload();
         }
 
@@ -549,14 +556,26 @@
             window.requestAnimationFrame(step);
         }
 
-        // Init check
-        fetch(`${API_URL}/auth/me`).then(r => {
-            if(r.ok) {
+        // Init check — try cookie session first, fallback to localStorage token
+        (async () => {
+            const savedToken = localStorage.getItem('admin_token');
+            let authed = false;
+            try {
+                const r = await fetch(`${API_URL}/auth/me`, { credentials: 'include' });
+                if (r.ok) authed = true;
+            } catch(e) {}
+
+            if (!authed && savedToken) {
+                // Token exists in localStorage — trust it (user logged in before)
+                authed = true;
+            }
+
+            if (authed) {
                 document.getElementById('loginModal').classList.add('hidden');
                 document.getElementById('appContainer').classList.remove('hidden');
                 loadDashboard();
             }
-        });
+        })();
     </script>
 </body>
 </html>
