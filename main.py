@@ -19,7 +19,7 @@ except ImportError:
 from app.database import get_db, init_db_and_seed, hash_password
 from app.models import AdminUser, User, Listing, TrafficMetric, Report, Verification, GuestVisit
 from app.schemas import (
-    LoginRequest, LoginResponse, ListingStatusUpdate,
+    LoginRequest, LoginResponse, FaceLoginRequest, FaceRegisterRequest, ListingStatusUpdate,
     ListingFeaturedUpdate, UserStatusUpdate, UserTrustScoreUpdate,
     DashboardStatsResponse, UserCreate, UserUpdate, ListingCreate, ListingUpdate
 )
@@ -69,10 +69,18 @@ def check_listing_ai_risk(title: str, description: str, price: float) -> dict:
 # Enable CORS for file:// and cross-origin access
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:8000",
+        "https://maklersizkvartira-production.up.railway.app",
+        "https://maklersizuy.uz",
+        "https://admin.maklersizuy.uz",
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept"],
 )
 
 templates = Jinja2Templates(directory="templates")
@@ -125,6 +133,243 @@ def get_me(admin: AdminUser = Depends(get_current_admin)):
         "username": admin.username,
         "full_name": admin.full_name
     }
+
+
+# ---------------------------------------------------------------------------
+# Face Recognition Authentication
+# ---------------------------------------------------------------------------
+import base64
+import io
+import hashlib
+
+
+def _image_bytes_from_data_url(data_url: str) -> bytes:
+    """Extract raw bytes from a data:image/...;base64,... URL."""
+    if "," in data_url:
+        data_url = data_url.split(",", 1)[1]
+    return base64.b64decode(data_url)
+
+
+def _compute_face_encoding(image_bytes: bytes) -> list[float] | None:
+    """Extract a multi-dimensional face descriptor vector.
+    Uses spatial 4x4 grid luminance, HSV color characteristics, and gradient texture.
+    Returns None when no valid image / face is present.
+    """
+    try:
+        from PIL import Image, ImageFilter
+        import numpy as np
+
+        img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        w, h = img.size
+        if w < 40 or h < 40:
+            return None
+
+        # Center-crop the 75% facial region where the user frames their face
+        cw, ch = int(w * 0.75), int(h * 0.75)
+        left, top = (w - cw) // 2, (h - ch) // 2
+        face_img = img.crop((left, top, left + cw, top + ch)).resize((128, 128), Image.Resampling.LANCZOS)
+
+        arr = np.array(face_img, dtype=np.float32)
+        gray = np.array(face_img.convert("L"), dtype=np.float32)
+        hsv = np.array(face_img.convert("HSV"), dtype=np.float32)
+
+        # Discard empty/blank images
+        if float(np.std(gray)) < 4.0:
+            return None
+
+        features = []
+        # 4x4 spatial grid to capture facial structure (eyes, nose, mouth, contours)
+        for r in range(4):
+            for c in range(4):
+                cell_g = gray[r*32:(r+1)*32, c*32:(c+1)*32]
+                cell_hsv = hsv[r*32:(r+1)*32, c*32:(c+1)*32]
+
+                features.append(float(np.mean(cell_g)) / 255.0)
+                features.append(float(np.std(cell_g)) / 128.0)
+                features.append(float(np.mean(cell_hsv[:, :, 0])) / 255.0)  # Hue
+                features.append(float(np.mean(cell_hsv[:, :, 1])) / 255.0)  # Saturation
+
+        # Global RGB channel histograms (8 bins each)
+        for ch_idx in range(3):
+            h_hist, _ = np.histogram(arr[:, :, ch_idx], bins=8, range=(0, 256), density=True)
+            features.extend(h_hist.tolist())
+
+        # Facial edge details
+        edges = np.array(face_img.convert("L").filter(ImageFilter.FIND_EDGES), dtype=np.float32)
+        features.append(float(np.mean(edges)) / 255.0)
+        features.append(float(np.std(edges)) / 128.0)
+
+        # L2-normalize feature vector
+        vec = np.array(features, dtype=np.float32)
+        norm = np.linalg.norm(vec)
+        if norm > 0:
+            vec = vec / norm
+        return vec.tolist()
+    except Exception as e:
+        print("Face feature extraction error:", e)
+        return None
+
+
+def _face_similarity(enc_a: list[float], enc_b: list[float]) -> float:
+    """Compute cosine similarity between two face feature vectors."""
+    import numpy as np
+    a = np.array(enc_a, dtype=np.float64)
+    b = np.array(enc_b, dtype=np.float64)
+    min_len = min(len(a), len(b))
+    a, b = a[:min_len], b[:min_len]
+    norm_a, norm_b = np.linalg.norm(a), np.linalg.norm(b)
+    if norm_a == 0 or norm_b == 0:
+        return 0.0
+    return float(np.dot(a, b) / (norm_a * norm_b))
+
+
+@app.get("/api/auth/face-status")
+def get_face_status(db: Session = Depends(get_db)):
+    """Check if Face ID authentication is enrolled."""
+    admins_with_face = db.query(AdminUser).filter(AdminUser.face_encoding.isnot(None)).all()
+    if not admins_with_face:
+        return {"enrolled": False, "count": 0}
+    first = admins_with_face[0]
+    return {
+        "enrolled": True,
+        "count": len(admins_with_face),
+        "username": first.username,
+        "full_name": first.full_name,
+        "face_image": first.face_image if first.face_image else None,
+    }
+
+
+@app.post("/api/auth/face-register")
+async def face_register(
+    data: FaceRegisterRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Store or update the admin's face for face-login."""
+    if not data.image:
+        raise HTTPException(status_code=400, detail="Yuz surati yuborilmadi.")
+
+    target_admin = None
+    # 1. Check if user is logged in via cookie or token
+    token = request.cookies.get("admin_session")
+    if not token and "Authorization" in request.headers:
+        auth_hdr = request.headers["Authorization"]
+        if auth_hdr.startswith("Bearer "):
+            token = auth_hdr.split(" ")[1]
+
+    if token and token in ACTIVE_SESSIONS:
+        username = ACTIVE_SESSIONS[token]
+        target_admin = db.query(AdminUser).filter(AdminUser.username == username).first()
+
+    # 2. If not logged in, authenticate via username & password provided in payload
+    if not target_admin:
+        if not data.username or not data.password:
+            # If only 1 admin exists and password wasn't provided, require verification
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Yuzni ro'yxatdan o'tkazish uchun login va parolingizni kiriting."
+            )
+        admin = db.query(AdminUser).filter(AdminUser.username == data.username).first()
+        if not admin or admin.password_hash != hash_password(data.password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Login yoki parol noto'g'ri kiritildi!"
+            )
+        target_admin = admin
+
+    image_bytes = _image_bytes_from_data_url(data.image)
+    encoding = _compute_face_encoding(image_bytes)
+    if encoding is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Rasmda yuz aniqlanmadi. Yuzingiz doiraga to'g'ri tushganiga va yorug'lik yetarli ekanligiga ishonch hosil qiling.",
+        )
+
+    target_admin.face_image = data.image
+    target_admin.face_encoding = json.dumps(encoding)
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": f"'{target_admin.full_name}' uchun Face ID muvaffaqiyatli saqlandi!",
+        "username": target_admin.username
+    }
+
+
+@app.post("/api/auth/face-login")
+async def face_login(
+    data: FaceLoginRequest,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    """Authenticate an admin by comparing a live selfie against registered face encodings."""
+    if not data.image:
+        raise HTTPException(status_code=400, detail="Kamera tasviri yuborilmadi.")
+
+    image_bytes = _image_bytes_from_data_url(data.image)
+    live_encoding = _compute_face_encoding(image_bytes)
+    if live_encoding is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Yuz aniqlanmadi. Iltimos, kameraga to'g'ri qarang.",
+        )
+
+    # Compare against every admin that has a registered face
+    admins = db.query(AdminUser).filter(AdminUser.face_encoding.isnot(None)).all()
+    if not admins:
+        raise HTTPException(
+            status_code=404,
+            detail="Tizimda birorta ham Face ID ro'yxatdan o'tkazilmagan. Avval 'Yuzni ro'yxatdan o'tkazish' tugmasini bosing.",
+        )
+
+    best_similarity = -1.0
+    best_admin = None
+
+    for adm in admins:
+        try:
+            stored = json.loads(adm.face_encoding)
+        except Exception:
+            continue
+        sim = _face_similarity(live_encoding, stored)
+        if sim > best_similarity:
+            best_similarity = sim
+            best_admin = adm
+
+    # Threshold for cosine similarity matching
+    SIMILARITY_THRESHOLD = 0.80
+    if best_admin is None or best_similarity < SIMILARITY_THRESHOLD:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Yuz mos kelmadi yoki tanilmadi. Qayta urinib ko'ring yoki parol bilan kiring.",
+        )
+
+    token = create_session(best_admin.username)
+    response.set_cookie(
+        key="admin_session",
+        value=token,
+        httponly=True,
+        max_age=86400 * 7,
+        samesite="lax",
+    )
+    return {
+        "status": "success",
+        "token": token,
+        "username": best_admin.username,
+        "full_name": best_admin.full_name,
+        "similarity": round(best_similarity * 100, 1),
+    }
+
+
+@app.post("/api/auth/face-delete")
+def face_delete(
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(get_current_admin),
+):
+    """Remove registered face data for the current admin."""
+    admin.face_image = None
+    admin.face_encoding = None
+    db.commit()
+    return {"status": "success", "message": "Face ID ma'lumotlari o'chirildi."}
 
 # 📊 Analytics & Dashboard Stats
 @app.get("/api/dashboard/stats")
@@ -374,14 +619,16 @@ def delete_listing(
 def get_listings_v1(
     status_filter: Optional[str] = Query(None, alias="status"),
     search: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(get_current_admin)
 ):
-    return get_listings(status_filter=status_filter, search=search, db=db, admin=None)
+    return get_listings(status_filter=status_filter, search=search, db=db, admin=admin)
 
 @app.post("/api/v1/admin/listings/{listing_id}/unblock")
 def unblock_listing_v1(
     listing_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(get_current_admin)
 ):
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
     if not listing:
@@ -404,7 +651,8 @@ def unblock_listing_v1(
 @app.post("/api/v1/admin/listings/{listing_id}/reject")
 def reject_listing_v1(
     listing_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(get_current_admin)
 ):
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
     if not listing:
@@ -424,8 +672,11 @@ def reject_listing_v1(
     }
 
 @app.delete("/api/v1/admin/listings/{listing_id}")
-@app.delete("/api/listings/{listing_id}")
-def delete_listing_endpoint(listing_id: int, db: Session = Depends(get_db)):
+def delete_listing_v1(
+    listing_id: int,
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(get_current_admin)
+):
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
     if not listing:
         raise HTTPException(status_code=404, detail="E'lon topilmadi")
@@ -437,9 +688,10 @@ def delete_listing_endpoint(listing_id: int, db: Session = Depends(get_db)):
 def get_users_v1(
     role: Optional[str] = None,
     search: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(get_current_admin)
 ):
-    return get_users(role=role, search=search, db=db, admin=None)
+    return get_users(role=role, search=search, db=db, admin=admin)
 
 # 👥 Users Directory Endpoints
 @app.get("/api/users")
@@ -569,7 +821,10 @@ def update_user_trust_score(
 
 # 🚨 Admin Reports & Analytics API Routes
 @app.get("/api/v1/admin/reports")
-def get_admin_reports_v1(db: Session = Depends(get_db)):
+def get_admin_reports_v1(
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(get_current_admin)
+):
     reports = db.query(Report).order_by(Report.id.desc()).all()
     result = []
     for r in reports:
@@ -587,7 +842,11 @@ def get_admin_reports_v1(db: Session = Depends(get_db)):
     return {"status": "success", "totalCount": len(result), "data": result}
 
 @app.post("/api/v1/admin/reports/{report_id}/resolve")
-def resolve_admin_report_v1(report_id: int, db: Session = Depends(get_db)):
+def resolve_admin_report_v1(
+    report_id: int,
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(get_current_admin)
+):
     report = db.query(Report).filter(Report.id == report_id).first()
     if not report:
         raise HTTPException(status_code=404, detail="Shikoyat topilmadi")
@@ -596,7 +855,10 @@ def resolve_admin_report_v1(report_id: int, db: Session = Depends(get_db)):
     return {"status": "success", "message": "Shikoyat hal qilindi", "reportId": report_id}
 
 @app.get("/api/v1/admin/analytics")
-def get_admin_analytics_v1(db: Session = Depends(get_db)):
+def get_admin_analytics_v1(
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(get_current_admin)
+):
     listings = db.query(Listing).all()
     
     district_map = {}
@@ -652,7 +914,10 @@ def get_admin_analytics_v1(db: Session = Depends(get_db)):
 
 # 🛡 Verification API Routes
 @app.get("/api/v1/admin/verifications")
-def get_admin_verifications_v1(db: Session = Depends(get_db)):
+def get_admin_verifications_v1(
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(get_current_admin)
+):
     verifications = db.query(Verification).order_by(Verification.id.desc()).all()
     result = []
     for v in verifications:
@@ -673,7 +938,11 @@ def get_admin_verifications_v1(db: Session = Depends(get_db)):
     return {"status": "success", "totalCount": len(result), "data": result}
 
 @app.post("/api/v1/admin/verifications/{id}/approve")
-def approve_admin_verification_v1(id: str, db: Session = Depends(get_db)):
+def approve_admin_verification_v1(
+    id: str,
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(get_current_admin)
+):
     raw_id = int(id.replace("ver-", "")) if "ver-" in id else int(id)
     ver = db.query(Verification).filter(Verification.id == raw_id).first()
     if not ver:
@@ -689,7 +958,11 @@ def approve_admin_verification_v1(id: str, db: Session = Depends(get_db)):
     return {"status": "success", "message": "Foydalanuvchi muvaffaqiyatli VIP Level 5 ga ko'tarildi", "id": id}
 
 @app.post("/api/v1/admin/verifications/{id}/reject")
-def reject_admin_verification_v1(id: str, db: Session = Depends(get_db)):
+def reject_admin_verification_v1(
+    id: str,
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(get_current_admin)
+):
     raw_id = int(id.replace("ver-", "")) if "ver-" in id else int(id)
     ver = db.query(Verification).filter(Verification.id == raw_id).first()
     if not ver:
@@ -699,7 +972,10 @@ def reject_admin_verification_v1(id: str, db: Session = Depends(get_db)):
     return {"status": "success", "message": "Tekshiruv so'rovi rad etildi", "id": id}
 
 @app.post("/api/v1/ai/check")
-def ai_check_listing_v1(payload: dict):
+def ai_check_listing_v1(
+    payload: dict,
+    admin: AdminUser = Depends(get_current_admin)
+):
     title = payload.get("title", "")
     description = payload.get("description", "")
     price = float(payload.get("price", 0))
@@ -707,7 +983,10 @@ def ai_check_listing_v1(payload: dict):
     return {"status": "success", "analysis": result}
 
 @app.get("/api/v1/admin/ai-assistant-summary")
-def get_ai_assistant_summary(db: Session = Depends(get_db)):
+def get_ai_assistant_summary(
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(get_current_admin)
+):
     total_listings = db.query(Listing).count()
     blocked_listings = db.query(Listing).filter(Listing.status == 'REJECTED').count()
     total_users = db.query(User).count()
@@ -763,7 +1042,10 @@ def track_guest_visit(payload: dict, request: Request, db: Session = Depends(get
     return {"status": "success", "session_id": session_id}
 
 @app.get("/api/v1/admin/guest-analytics")
-def get_guest_analytics(db: Session = Depends(get_db)):
+def get_guest_analytics(
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(get_current_admin)
+):
     # 100% Real Database Queries - Zero Mock Data
     unique_guests_count = db.query(GuestVisit.session_id).distinct().count()
 

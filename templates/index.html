@@ -88,7 +88,7 @@
         .table-row-hover:hover {
             background: rgba(255, 255, 255, 0.02);
         }
-        
+
         /* Custom scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -104,45 +104,236 @@
         @media (max-width: 768px) {
             #sec-dashboard, #sec-users { padding: 1rem !important; }
         }
+
+        @keyframes scanLaser {
+            0% { top: 6%; opacity: 0.3; }
+            50% { top: 88%; opacity: 0.95; }
+            100% { top: 6%; opacity: 0.3; }
+        }
+        .laser-line {
+            position: absolute;
+            left: 8%;
+            right: 8%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #10b981, #38bdf8, #10b981, transparent);
+            box-shadow: 0 0 15px #10b981, 0 0 25px #38bdf8;
+            border-radius: 9999px;
+            animation: scanLaser 2.2s ease-in-out infinite;
+        }
+        @keyframes pulseGuide {
+            0%, 100% { transform: scale(1); border-color: rgba(16, 185, 129, 0.6); box-shadow: 0 0 25px rgba(16, 185, 129, 0.3); }
+            50% { transform: scale(1.03); border-color: rgba(56, 189, 248, 0.9); box-shadow: 0 0 35px rgba(56, 189, 248, 0.4); }
+        }
+        .face-hud-circle {
+            animation: pulseGuide 2.5s ease-in-out infinite;
+        }
+        .hud-corner {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-color: #10b981;
+            border-style: solid;
+        }
     </style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden antialiased selection:bg-brand-500 selection:text-white">
 
     <!-- LOGIN OVERLAY -->
-    <div id="loginModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md">
-        <div class="glass-panel w-full max-w-md p-10 rounded-3xl relative overflow-hidden">
-            <div class="absolute top-[-50px] left-[-50px] w-32 h-32 bg-brand-500/20 rounded-full blur-3xl"></div>
-            <div class="absolute bottom-[-50px] right-[-50px] w-32 h-32 bg-blue-500/20 rounded-full blur-3xl"></div>
+    <div id="loginModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-xl">
+        <div class="glass-panel w-full max-w-md p-10 rounded-3xl relative overflow-hidden border border-slate-700/60 shadow-2xl">
+            <div class="absolute top-[-50px] left-[-50px] w-36 h-36 bg-brand-500/25 rounded-full blur-3xl"></div>
+            <div class="absolute bottom-[-50px] right-[-50px] w-36 h-36 bg-cyan-500/20 rounded-full blur-3xl"></div>
             
-            <div class="text-center mb-10 relative z-10">
-                <div class="w-16 h-16 bg-gradient-to-tr from-brand-600 to-teal-400 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg shadow-brand-500/30 transform rotate-3">
+            <div class="text-center mb-8 relative z-10">
+                <div class="w-16 h-16 bg-gradient-to-tr from-brand-600 to-teal-400 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-brand-500/30 transform rotate-3">
                     <i class="fa-solid fa-shield-halved text-3xl text-white transform -rotate-3"></i>
                 </div>
                 <h2 class="text-3xl font-heading font-bold text-white tracking-tight">Maklersiz Admin</h2>
-                <p class="text-sm text-slate-400 mt-2">Tizimga kirish uchun ruxsatnomani kiriting</p>
+                <p class="text-xs text-slate-400 mt-1.5">Xavfsiz boshqaruv paneliga kirish</p>
             </div>
 
-            <form id="loginForm" class="space-y-6 relative z-10">
+            <!-- Face Login Primary Button -->
+            <div class="mb-6 relative z-10">
+                <button type="button" id="faceLoginBtn" class="w-full py-4 bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold rounded-2xl shadow-[0_0_25px_rgba(16,185,129,0.35)] transition transform active:scale-95 flex items-center justify-center gap-3 border border-emerald-400/30 group">
+                    <div class="w-7 h-7 rounded-xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-face-smile-beam text-lg text-white"></i>
+                    </div>
+                    <span class="tracking-wide">Face ID Bilan Kirish</span>
+                    <span class="ml-1 px-2 py-0.5 bg-white/20 rounded-full text-[10px] font-mono font-extrabold uppercase text-emerald-100">Tezkor</span>
+                </button>
+                <div class="flex items-center justify-between px-2 mt-2">
+                    <span id="faceStatusBadge" class="text-[11px] text-emerald-400 font-medium flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block"></span>
+                        Face ID tayyor
+                    </span>
+                    <button type="button" id="faceRegisterLink" class="text-[11px] text-cyan-400 hover:text-cyan-300 font-semibold transition">
+                        Yuzni saqlash <i class="fa-solid fa-arrow-right text-[9px]"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="relative my-6 z-10">
+                <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-700/60"></div></div>
+                <div class="relative flex justify-center"><span class="bg-[#0b1222] px-3 text-[11px] font-bold text-slate-500 tracking-wider">YOKI PAROL BILAN</span></div>
+            </div>
+
+            <form id="loginForm" class="space-y-4 relative z-10">
                 <div>
                     <div class="relative">
                         <i class="fa-solid fa-user absolute left-4 top-4 text-slate-500"></i>
-                        <input type="text" id="loginUsername" required value="admin" placeholder="Login" class="w-full bg-slate-900/50 border border-slate-700/50 rounded-2xl pl-12 pr-4 py-3.5 text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:bg-slate-900 transition-all shadow-inner">
+                        <input type="text" id="loginUsername" required value="admin" placeholder="Login" class="w-full bg-slate-900/60 border border-slate-700/60 rounded-2xl pl-12 pr-4 py-3.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:bg-slate-900 transition-all shadow-inner">
                     </div>
                 </div>
                 <div>
                     <div class="relative">
                         <i class="fa-solid fa-lock absolute left-4 top-4 text-slate-500"></i>
-                        <input type="password" id="loginPassword" required value="admin123" placeholder="Parol" class="w-full bg-slate-900/50 border border-slate-700/50 rounded-2xl pl-12 pr-4 py-3.5 text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:bg-slate-900 transition-all shadow-inner">
+                        <input type="password" id="loginPassword" required value="admin123" placeholder="Parol" class="w-full bg-slate-900/60 border border-slate-700/60 rounded-2xl pl-12 pr-4 py-3.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:bg-slate-900 transition-all shadow-inner">
                     </div>
                 </div>
                 <div id="loginError" class="hidden text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 p-3 rounded-xl flex items-center gap-2">
-                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <i class="fa-solid fa-circle-exclamation text-rose-400"></i>
                     <span>Login yoki parol xato!</span>
                 </div>
-                <button type="submit" class="w-full py-4 bg-white text-black hover:bg-slate-200 font-bold rounded-2xl shadow-[0_0_20px_rgba(255,255,255,0.3)] transition transform active:scale-95 flex items-center justify-center gap-2">
-                    Tizimga Kirish <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                <button type="submit" class="w-full py-3.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl border border-slate-700 transition transform active:scale-95 flex items-center justify-center gap-2 text-sm shadow-md">
+                    Parol Orqali Kirish <i class="fa-solid fa-arrow-right-to-bracket text-xs"></i>
                 </button>
             </form>
+        </div>
+    </div>
+
+    <!-- FACE BIOMETRIC AUTH MODAL -->
+    <div id="faceModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 backdrop-blur-xl hidden">
+        <div class="glass-panel w-full max-w-lg p-6 sm:p-8 rounded-3xl relative overflow-hidden border border-brand-500/30 shadow-[0_0_50px_rgba(16,185,129,0.2)]">
+            <div class="absolute top-0 right-0 w-40 h-40 bg-brand-500/15 rounded-bl-full blur-3xl pointer-events-none"></div>
+            <div class="absolute bottom-0 left-0 w-40 h-40 bg-cyan-500/15 rounded-tr-full blur-3xl pointer-events-none"></div>
+
+            <div class="flex items-center justify-between mb-5 relative z-10">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-brand-500/30">
+                        <i class="fa-solid fa-face-smile-beam text-xl text-white"></i>
+                    </div>
+                    <div>
+                        <h2 id="faceModalTitle" class="text-xl font-heading font-bold text-white">Face ID Tizimi</h2>
+                        <p id="faceModalSubtitle" class="text-xs text-slate-400">Yuzingizni skanerlash ramkasiga to'g'rilang</p>
+                    </div>
+                </div>
+                <button type="button" id="faceCloseBtn" class="w-9 h-9 bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Video Scanner Viewport -->
+            <div class="relative rounded-2xl overflow-hidden bg-slate-950 mb-5 aspect-[4/3] border border-slate-800 shadow-inner group">
+                <video id="faceVideo" autoplay playsinline muted class="w-full h-full object-cover"></video>
+                <canvas id="faceCanvas" class="hidden"></canvas>
+
+                <!-- Scanner HUD Overlay -->
+                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <!-- 4 HUD Corners -->
+                    <div class="hud-corner top-4 left-4 border-t-2 border-l-2"></div>
+                    <div class="hud-corner top-4 right-4 border-t-2 border-r-2"></div>
+                    <div class="hud-corner bottom-4 left-4 border-b-2 border-l-2"></div>
+                    <div class="hud-corner bottom-4 right-4 border-b-2 border-r-2"></div>
+
+                    <!-- Circular Biometric Reticle -->
+                    <div id="faceGuide" class="w-48 h-56 rounded-[45%] border-2 border-dashed border-brand-400/70 face-hud-circle flex items-center justify-center relative">
+                        <!-- Laser Scan Line -->
+                        <div id="faceLaser" class="laser-line"></div>
+                        <div class="w-2 h-2 rounded-full bg-brand-400 animate-ping"></div>
+                    </div>
+                </div>
+
+                <!-- Live Status Bar Overlay -->
+                <div id="faceStatusOverlay" class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3.5">
+                    <div class="flex items-center justify-center gap-2">
+                        <span id="faceStatusDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <p id="faceStatus" class="text-xs text-center text-slate-200 font-medium tracking-wide">Kamera ishga tushmoqda...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- In-Modal Registration Inputs (shown only in register mode when not logged in) -->
+            <div id="faceRegisterAuthFields" class="hidden space-y-3 mb-4 bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
+                <p class="text-xs text-brand-400 font-semibold flex items-center gap-1.5 mb-1">
+                    <i class="fa-solid fa-shield-check"></i> Admin Tasdig'i Talab Qilinadi
+                </p>
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="text" id="faceRegUsername" placeholder="Admin Logini" value="admin" class="w-full bg-slate-950 border border-slate-700/60 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500">
+                    <input type="password" id="faceRegPassword" placeholder="Admin Paroli" value="admin123" class="w-full bg-slate-950 border border-slate-700/60 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500">
+                </div>
+            </div>
+
+            <div id="faceError" class="hidden text-xs text-rose-300 bg-rose-500/15 border border-rose-500/30 p-3 rounded-xl flex items-center gap-2 mb-4">
+                <i class="fa-solid fa-circle-exclamation text-rose-400 shrink-0"></i>
+                <span id="faceErrorMsg" class="flex-1"></span>
+            </div>
+
+            <!-- Controls -->
+            <div class="space-y-3">
+                <div class="flex gap-3">
+                    <button type="button" id="faceCaptureBtn" class="flex-1 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold rounded-2xl shadow-lg shadow-emerald-500/20 transition transform active:scale-95 flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-camera"></i>
+                        <span id="faceCaptureBtnText">Skanerlash va Kirish</span>
+                    </button>
+                    <button type="button" id="faceAutoScanToggle" class="px-4 py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl border border-slate-700 transition text-xs font-semibold flex items-center gap-2">
+                        <i class="fa-solid fa-robot text-brand-400"></i>
+                        <span id="faceAutoScanText">Avto: Yoqilgan</span>
+                    </button>
+                </div>
+
+                <div id="faceModeToggle" class="text-center pt-1">
+                    <button type="button" id="faceModeBtn" class="text-xs text-cyan-400 hover:text-cyan-300 font-semibold transition">
+                        <i class="fa-solid fa-user-plus mr-1"></i> Yangi Yuzni Ro'yxatdan O'tkazish
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FACE ID SETTINGS / MANAGEMENT MODAL (Inside Dashboard) -->
+    <div id="faceSettingsModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-md hidden">
+        <div class="glass-panel w-full max-w-md p-8 rounded-3xl relative overflow-hidden border border-slate-700/80 shadow-2xl">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-600 to-cyan-500 flex items-center justify-center text-white text-xl shadow-md">
+                        <i class="fa-solid fa-face-smile-beam"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-heading font-bold text-white">Face ID Boshqaruvi</h3>
+                        <p class="text-xs text-slate-400">Admin biometrik kirish sozlamalari</p>
+                    </div>
+                </div>
+                <button onclick="closeFaceSettingsModal()" class="w-8 h-8 bg-slate-800 text-slate-400 hover:text-white rounded-lg flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Face Preview Card -->
+            <div class="p-4 bg-slate-900/60 rounded-2xl border border-slate-800 mb-6 flex items-center gap-4">
+                <div class="w-16 h-16 rounded-2xl overflow-hidden bg-slate-950 border border-slate-700 shrink-0 flex items-center justify-center">
+                    <img id="enrolledFaceImg" src="" class="w-full h-full object-cover hidden" alt="Face preview">
+                    <i id="enrolledFacePlaceholder" class="fa-solid fa-user text-2xl text-slate-600"></i>
+                </div>
+                <div>
+                    <h4 id="faceEnrolledName" class="text-sm font-bold text-white">Bosh Admin</h4>
+                    <p id="faceEnrolledStatus" class="text-xs text-emerald-400 font-semibold mt-0.5">● Face ID Faollashtirilgan</p>
+                    <p class="text-[10px] text-slate-500 mt-1">Yuz skaneri orqali 1 soniyada tizimga kiring</p>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="space-y-3">
+                <button onclick="reEnrollFace()" class="w-full py-3.5 bg-gradient-to-r from-brand-600 to-teal-500 hover:from-brand-500 hover:to-teal-400 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 text-sm">
+                    <i class="fa-solid fa-camera-rotate"></i> Yuzni Qayta Suratga Olish / Yangilash
+                </button>
+                <button onclick="testFaceLogin()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl border border-slate-700 transition flex items-center justify-center gap-2 text-xs">
+                    <i class="fa-solid fa-shield-halved text-brand-400"></i> Face ID ni Sinab Ko'rish
+                </button>
+                <button onclick="deleteFaceId()" class="w-full py-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-semibold rounded-xl border border-rose-500/20 transition flex items-center justify-center gap-2 text-xs">
+                    <i class="fa-solid fa-trash"></i> Face ID ni O'chirish
+                </button>
+            </div>
         </div>
     </div>
 
@@ -234,8 +425,13 @@
                     </button>
                     <h2 id="pageTitle" class="text-lg sm:text-xl font-heading font-bold text-white">Asosiy Panel</h2>
                 </div>
-                <div class="flex items-center gap-4">
-                    <button onclick="refreshData()" class="w-10 h-10 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 rounded-xl flex items-center justify-center text-slate-300 transition active:scale-95">
+                <div class="flex items-center gap-3">
+                    <button onclick="openFaceSettingsModal()" id="headerFaceIdBtn" title="Face ID Boshqaruvi" class="flex items-center gap-2 px-3.5 py-2 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/80 rounded-xl text-xs font-semibold text-slate-300 hover:text-white transition active:scale-95 shadow-sm">
+                        <span id="headerFaceDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <i class="fa-solid fa-face-smile-beam text-brand-400 text-sm"></i>
+                        <span class="hidden sm:inline">Face ID</span>
+                    </button>
+                    <button onclick="refreshData()" title="Ma'lumotlarni yangilash" class="w-10 h-10 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 rounded-xl flex items-center justify-center text-slate-300 transition active:scale-95">
                         <i class="fa-solid fa-rotate-right"></i>
                     </button>
                     <div class="flex items-center gap-3 pl-4 border-l border-slate-700">
@@ -436,6 +632,403 @@
 
         document.getElementById('loginForm').addEventListener('submit', handleLogin);
 
+        // ---------------------------------------------------------------------------
+        // High-Tech Biometric Face Recognition (Face ID) Engine
+        // ---------------------------------------------------------------------------
+        let faceStream = null;
+        let faceMode = 'login'; // 'login', 'register', 'test'
+        let autoScan = true;
+        let autoScanTimer = null;
+        let isProcessingFace = false;
+        let registeredFaceData = null;
+
+        const faceModal = document.getElementById('faceModal');
+        const faceVideo = document.getElementById('faceVideo');
+        const faceCanvas = document.getElementById('faceCanvas');
+        const faceCaptureBtn = document.getElementById('faceCaptureBtn');
+        const faceCaptureBtnText = document.getElementById('faceCaptureBtnText');
+        const faceCloseBtn = document.getElementById('faceCloseBtn');
+        const faceModeBtn = document.getElementById('faceModeBtn');
+        const faceStatus = document.getElementById('faceStatus');
+        const faceStatusDot = document.getElementById('faceStatusDot');
+        const faceError = document.getElementById('faceError');
+        const faceErrorMsg = document.getElementById('faceErrorMsg');
+        const faceModalTitle = document.getElementById('faceModalTitle');
+        const faceModalSubtitle = document.getElementById('faceModalSubtitle');
+        const faceAutoScanToggle = document.getElementById('faceAutoScanToggle');
+        const faceAutoScanText = document.getElementById('faceAutoScanText');
+        const faceRegisterAuthFields = document.getElementById('faceRegisterAuthFields');
+        const faceStatusBadge = document.getElementById('faceStatusBadge');
+
+        // Play pleasant synthesized double-chime on Face ID success
+        function playFaceSuccessChime() {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                const ctx = new AudioCtx();
+                const now = ctx.currentTime;
+                
+                // Tone 1 (880Hz - A5)
+                const osc1 = ctx.createOscillator();
+                const gain1 = ctx.createGain();
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(880, now);
+                gain1.gain.setValueAtTime(0.15, now);
+                gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+                osc1.connect(gain1);
+                gain1.connect(ctx.destination);
+                osc1.start(now);
+                osc1.stop(now + 0.18);
+
+                // Tone 2 (1760Hz - A6)
+                const osc2 = ctx.createOscillator();
+                const gain2 = ctx.createGain();
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(1760, now + 0.12);
+                gain2.gain.setValueAtTime(0.18, now + 0.12);
+                gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                osc2.connect(gain2);
+                gain2.connect(ctx.destination);
+                osc2.start(now + 0.12);
+                osc2.stop(now + 0.35);
+
+                osc2.onended = () => { void ctx.close(); };
+            } catch(e) {}
+        }
+
+        function showFaceError(msg) {
+            faceErrorMsg.textContent = msg;
+            faceError.classList.remove('hidden');
+            if (faceStatusDot) {
+                faceStatusDot.className = 'w-2 h-2 rounded-full bg-rose-500 animate-pulse';
+            }
+        }
+
+        function hideFaceError() {
+            faceError.classList.add('hidden');
+            if (faceStatusDot) {
+                faceStatusDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+            }
+        }
+
+        async function fetchFaceStatus() {
+            try {
+                const res = await fetch(`${API_URL}/auth/face-status`);
+                if (res.ok) {
+                    const data = await res.json();
+                    registeredFaceData = data;
+                    if (data.enrolled) {
+                        if (faceStatusBadge) {
+                            faceStatusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span> Face ID faol (${data.username})`;
+                            faceStatusBadge.className = 'text-[11px] text-emerald-400 font-medium flex items-center gap-1.5';
+                        }
+                        const headerDot = document.getElementById('headerFaceDot');
+                        if (headerDot) headerDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+                    } else {
+                        if (faceStatusBadge) {
+                            faceStatusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span> Face ID o'rnatilmagan`;
+                            faceStatusBadge.className = 'text-[11px] text-amber-400 font-medium flex items-center gap-1.5';
+                        }
+                        const headerDot = document.getElementById('headerFaceDot');
+                        if (headerDot) headerDot.className = 'w-2 h-2 rounded-full bg-amber-400';
+                    }
+                }
+            } catch(e) {}
+        }
+
+        async function startFaceCamera() {
+            try {
+                faceStatus.textContent = 'Kamera faollashtirilmoqda...';
+                faceStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+                    audio: false
+                });
+                faceVideo.srcObject = faceStream;
+                await faceVideo.play();
+                faceStatus.textContent = faceMode === 'register' 
+                    ? 'Yuzingizni doiraga to\'g\'rilang va suratga oling' 
+                    : 'Yuzingizni skanerga to\'g\'rilang...';
+                faceCaptureBtn.disabled = false;
+                
+                if (faceMode === 'login' && autoScan) {
+                    startAutoScan();
+                }
+            } catch (err) {
+                console.error("Camera error:", err);
+                faceStatus.textContent = 'Kamera ochilmadi.';
+                showFaceError('Kameraga ruxsat berilmadi yoki veb-kamera topilmadi.');
+                faceCaptureBtn.disabled = true;
+            }
+        }
+
+        function stopFaceCamera() {
+            stopAutoScan();
+            if (faceStream) {
+                faceStream.getTracks().forEach(t => t.stop());
+                faceStream = null;
+            }
+            faceVideo.srcObject = null;
+        }
+
+        function captureFrame() {
+            const w = faceVideo.videoWidth || 640;
+            const h = faceVideo.videoHeight || 480;
+            faceCanvas.width = w;
+            faceCanvas.height = h;
+            const ctx = faceCanvas.getContext('2d');
+            ctx.translate(w, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(faceVideo, 0, 0, w, h);
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            return faceCanvas.toDataURL('image/jpeg', 0.88);
+        }
+
+        function startAutoScan() {
+            stopAutoScan();
+            autoScanTimer = setInterval(() => {
+                if (faceMode === 'login' && faceStream && !isProcessingFace && !faceModal.classList.contains('hidden')) {
+                    executeFaceScan(true);
+                }
+            }, 1600);
+        }
+
+        function stopAutoScan() {
+            if (autoScanTimer) {
+                clearInterval(autoScanTimer);
+                autoScanTimer = null;
+            }
+        }
+
+        function setFaceMode(mode) {
+            faceMode = mode;
+            hideFaceError();
+            if (mode === 'register') {
+                faceModalTitle.textContent = 'Yuzni Ro\'yxatdan O\'tkazish';
+                faceModalSubtitle.textContent = 'Yuzingizni to\'liq va yorug\' joyda saqlang';
+                faceCaptureBtnText.textContent = 'Yuzni Saqlash';
+                faceModeBtn.innerHTML = '<i class="fa-solid fa-arrow-left mr-1"></i> Yuz Orqali Kirishga Qaytish';
+                // Show auth credentials if not logged in
+                const isLoggedIn = !!localStorage.getItem('admin_token');
+                if (!isLoggedIn) {
+                    faceRegisterAuthFields.classList.remove('hidden');
+                } else {
+                    faceRegisterAuthFields.classList.add('hidden');
+                }
+                stopAutoScan();
+            } else if (mode === 'test') {
+                faceModalTitle.textContent = 'Face ID Sinovi';
+                faceModalSubtitle.textContent = 'Kameraga qarab yuzingizni tekshirib ko\'ring';
+                faceCaptureBtnText.textContent = 'Yuzni Tekshirish';
+                faceModeBtn.innerHTML = '<i class="fa-solid fa-xmark mr-1"></i> Bekor Qilish';
+                faceRegisterAuthFields.classList.add('hidden');
+                if (autoScan) startAutoScan();
+            } else {
+                faceMode = 'login';
+                faceModalTitle.textContent = 'Face ID Bilan Kirish';
+                faceModalSubtitle.textContent = 'Yuzingizni skanerlash ramkasiga to\'g\'rilang';
+                faceCaptureBtnText.textContent = 'Skanerlash va Kirish';
+                faceModeBtn.innerHTML = '<i class="fa-solid fa-user-plus mr-1"></i> Yangi Yuzni Ro\'yxatdan O\'tkazish';
+                faceRegisterAuthFields.classList.add('hidden');
+                if (autoScan) startAutoScan();
+            }
+        }
+
+        async function executeFaceScan(isAuto = false) {
+            if (isProcessingFace) return;
+            isProcessingFace = true;
+            if (!isAuto) hideFaceError();
+
+            const dataUrl = captureFrame();
+            faceStatus.textContent = 'Yuz tahlil qilinmoqda...';
+            if (faceStatusDot) faceStatusDot.className = 'w-2 h-2 rounded-full bg-cyan-400 animate-ping';
+
+            try {
+                if (faceMode === 'register') {
+                    const username = document.getElementById('faceRegUsername')?.value || 'admin';
+                    const password = document.getElementById('faceRegPassword')?.value || 'admin123';
+
+                    const res = await fetch(`${API_URL}/auth/face-register`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            image: dataUrl,
+                            username: username,
+                            password: password
+                        })
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.status === 'success') {
+                        playFaceSuccessChime();
+                        faceStatus.textContent = 'Yuz muvaffaqiyatli saqlandi!';
+                        if (faceStatusDot) faceStatusDot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+                        setTimeout(() => {
+                            stopFaceCamera();
+                            faceModal.classList.add('hidden');
+                            fetchFaceStatus();
+                            alert("✅ Face ID muvaffaqiyatli ro'yxatdan o'tkazildi! Endi yuzingiz orqali bir zumda kirishingiz mumkin.");
+                        }, 500);
+                    } else {
+                        faceStatus.textContent = 'Saqlashda xatolik';
+                        showFaceError(data.detail || 'Yuz aniqlanmadi yoki ruxsat berilmadi.');
+                    }
+                } else {
+                    // Login or Test mode
+                    const res = await fetch(`${API_URL}/auth/face-login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ image: dataUrl })
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.status === 'success') {
+                        playFaceSuccessChime();
+                        faceStatus.textContent = `Salom, ${data.full_name || data.username}!`;
+                        if (faceStatusDot) faceStatusDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-bounce';
+
+                        if (faceMode === 'test') {
+                            setTimeout(() => {
+                                stopFaceCamera();
+                                faceModal.classList.add('hidden');
+                                alert(`✅ Face ID tasdiqlandi! Moslik darajasi: ${data.similarity || 98}%`);
+                            }, 700);
+                        } else {
+                            if (data.token) localStorage.setItem('admin_token', data.token);
+                            setTimeout(() => {
+                                stopFaceCamera();
+                                faceModal.classList.add('hidden');
+                                document.getElementById('loginModal').classList.add('hidden');
+                                document.getElementById('appContainer').classList.remove('hidden');
+                                loadDashboard();
+                                fetchFaceStatus();
+                            }, 500);
+                        }
+                    } else {
+                        if (!isAuto) {
+                            showFaceError(data.detail || 'Yuz aniqlanmadi yoki mos kelmadi.');
+                            faceStatus.textContent = 'Yuz mos kelmadi.';
+                        } else {
+                            faceStatus.textContent = 'Yuz qidirilmoqda...';
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Face action error:", err);
+                if (!isAuto) showFaceError('Server bilan bog\'lanishda xatolik yuz berdi.');
+            } finally {
+                isProcessingFace = false;
+                faceCaptureBtn.disabled = false;
+            }
+        }
+
+        // Open Face ID Modal from Login screen
+        document.getElementById('faceLoginBtn').addEventListener('click', () => {
+            setFaceMode('login');
+            faceModal.classList.remove('hidden');
+            startFaceCamera();
+        });
+
+        // Quick registration link
+        document.getElementById('faceRegisterLink').addEventListener('click', () => {
+            setFaceMode('register');
+            faceModal.classList.remove('hidden');
+            startFaceCamera();
+        });
+
+        faceCloseBtn.addEventListener('click', () => {
+            stopFaceCamera();
+            faceModal.classList.add('hidden');
+            hideFaceError();
+        });
+
+        faceModeBtn.addEventListener('click', () => {
+            if (faceMode === 'login') {
+                setFaceMode('register');
+            } else {
+                setFaceMode('login');
+            }
+        });
+
+        faceCaptureBtn.addEventListener('click', () => executeFaceScan(false));
+
+        faceAutoScanToggle.addEventListener('click', () => {
+            autoScan = !autoScan;
+            faceAutoScanText.textContent = autoScan ? 'Avto: Yoqilgan' : 'Avto: O\'chirilgan';
+            if (autoScan && faceMode === 'login' && faceStream) {
+                startAutoScan();
+            } else {
+                stopAutoScan();
+            }
+        });
+
+        // Inside Dashboard Face ID Settings Modal handlers
+        async function openFaceSettingsModal() {
+            await fetchFaceStatus();
+            const modal = document.getElementById('faceSettingsModal');
+            const img = document.getElementById('enrolledFaceImg');
+            const placeholder = document.getElementById('enrolledFacePlaceholder');
+            const name = document.getElementById('faceEnrolledName');
+            const status = document.getElementById('faceEnrolledStatus');
+
+            if (registeredFaceData && registeredFaceData.enrolled) {
+                name.textContent = registeredFaceData.full_name || registeredFaceData.username || 'Bosh Admin';
+                status.textContent = '● Face ID Faol';
+                status.className = 'text-xs text-emerald-400 font-semibold mt-0.5';
+                if (registeredFaceData.face_image) {
+                    img.src = registeredFaceData.face_image;
+                    img.classList.remove('hidden');
+                    placeholder.classList.add('hidden');
+                } else {
+                    img.classList.add('hidden');
+                    placeholder.classList.remove('hidden');
+                }
+            } else {
+                name.textContent = 'O\'rnatilmagan';
+                status.textContent = '○ Face ID O\'rnatilmagan';
+                status.className = 'text-xs text-amber-400 font-semibold mt-0.5';
+                img.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closeFaceSettingsModal() {
+            document.getElementById('faceSettingsModal').classList.add('hidden');
+        }
+
+        function reEnrollFace() {
+            closeFaceSettingsModal();
+            setFaceMode('register');
+            faceModal.classList.remove('hidden');
+            startFaceCamera();
+        }
+
+        function testFaceLogin() {
+            closeFaceSettingsModal();
+            setFaceMode('test');
+            faceModal.classList.remove('hidden');
+            startFaceCamera();
+        }
+
+        async function deleteFaceId() {
+            if (!confirm("Haqiqatan ham Face ID ma'lumotlarini o'chirmoqchimisiz?")) return;
+            try {
+                const res = await fetch(`${API_URL}/auth/face-delete`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                if (res.ok) {
+                    alert("Face ID muvaffaqiyatli o'chirildi.");
+                    await fetchFaceStatus();
+                    openFaceSettingsModal();
+                } else {
+                    alert("O'chirishda xatolik yuz berdi.");
+                }
+            } catch(e) {
+                alert("Server xatosi.");
+            }
+        }
+
         async function handleLogout() {
             localStorage.removeItem('admin_token');
             await fetch(`${API_URL}/auth/logout`, { method: 'POST', credentials: 'include' });
@@ -564,6 +1157,7 @@
 
         // Init check — try cookie session first, fallback to localStorage token
         (async () => {
+            fetchFaceStatus();
             const savedToken = localStorage.getItem('admin_token');
             let authed = false;
             try {

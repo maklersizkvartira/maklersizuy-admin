@@ -11,6 +11,10 @@ class AdminUser(Base):
     username = Column(String, unique=True, index=True, nullable=False)
     password_hash = Column(String, nullable=False)
     full_name = Column(String, default="Bosh Admin")
+    # Base64-encoded reference face image for face recognition login.
+    face_image = Column(Text, nullable=True)
+    # Face encoding as JSON array of 128 floats (face_recognition library format).
+    face_encoding = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class User(Base):

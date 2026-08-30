@@ -35,9 +35,19 @@ def init_db_and_seed():
     db = SessionLocal()
     
     try:
-        # Migrate table if password column is missing
+        # Migrate table if columns are missing
         try:
             db.execute(text("ALTER TABLE users ADD COLUMN password VARCHAR DEFAULT '123456'"))
+            db.commit()
+        except Exception:
+            db.rollback()
+        try:
+            db.execute(text("ALTER TABLE admin_users ADD COLUMN face_image TEXT"))
+            db.commit()
+        except Exception:
+            db.rollback()
+        try:
+            db.execute(text("ALTER TABLE admin_users ADD COLUMN face_encoding TEXT"))
             db.commit()
         except Exception:
             db.rollback()
