@@ -923,7 +923,11 @@
 
         // Open Face ID Modal from Login screen
         document.getElementById('faceLoginBtn').addEventListener('click', () => {
-            setFaceMode('login');
+            if (registeredFaceData && !registeredFaceData.enrolled) {
+                setFaceMode('register');
+            } else {
+                setFaceMode('login');
+            }
             faceModal.classList.remove('hidden');
             startFaceCamera();
         });
