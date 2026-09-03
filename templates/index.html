@@ -471,278 +471,6 @@
 
         document.getElementById('loginForm').addEventListener('submit', handleLogin);
 
-        // ---------------------------------------------------------------------------
-        // High-Tech Biometric Face Recognition (Face ID) Engine
-        // ---------------------------------------------------------------------------
-        let faceStream = null;
-        let faceMode = 'login'; // 'login', 'register', 'test'
-        let autoScan = true;
-        let autoScanTimer = null;
-        let isProcessingFace = false;
-        let registeredFaceData = null;
-
-        const faceModal = document.getElementById('faceModal');
-        const faceVideo = document.getElementById('faceVideo');
-        const faceCanvas = document.getElementById('faceCanvas');
-        const faceCaptureBtn = document.getElementById('faceCaptureBtn');
-        const faceCaptureBtnText = document.getElementById('faceCaptureBtnText');
-        const faceCloseBtn = document.getElementById('faceCloseBtn');
-        const faceModeBtn = document.getElementById('faceModeBtn');
-        const faceStatus = document.getElementById('faceStatus');
-        const faceStatusDot = document.getElementById('faceStatusDot');
-        const faceError = document.getElementById('faceError');
-        const faceErrorMsg = document.getElementById('faceErrorMsg');
-        const faceModalTitle = document.getElementById('faceModalTitle');
-        const faceModalSubtitle = document.getElementById('faceModalSubtitle');
-        const faceAutoScanToggle = document.getElementById('faceAutoScanToggle');
-        const faceAutoScanText = document.getElementById('faceAutoScanText');
-        const faceRegisterAuthFields = document.getElementById('faceRegisterAuthFields');
-        const faceStatusBadge = document.getElementById('faceStatusBadge');
-
-        // Play pleasant synthesized double-chime on Face ID success
-        function playFaceSuccessChime() {
-            try {
-                const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                if (!AudioCtx) return;
-                const ctx = new AudioCtx();
-                const now = ctx.currentTime;
-                
-                // Tone 1 (880Hz - A5)
-                const osc1 = ctx.createOscillator();
-                const gain1 = ctx.createGain();
-                osc1.type = 'sine';
-                osc1.frequency.setValueAtTime(880, now);
-                gain1.gain.setValueAtTime(0.15, now);
-                gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-                osc1.connect(gain1);
-                gain1.connect(ctx.destination);
-                osc1.start(now);
-                osc1.stop(now + 0.18);
-
-                // Tone 2 (1760Hz - A6)
-                const osc2 = ctx.createOscillator();
-                const gain2 = ctx.createGain();
-                osc2.type = 'sine';
-                osc2.frequency.setValueAtTime(1760, now + 0.12);
-                gain2.gain.setValueAtTime(0.18, now + 0.12);
-                gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-                osc2.connect(gain2);
-                gain2.connect(ctx.destination);
-                osc2.start(now + 0.12);
-                osc2.stop(now + 0.35);
-
-                osc2.onended = () => { void ctx.close(); };
-            } catch(e) {}
-        }
-
-        function showFaceError(msg) {
-            faceErrorMsg.textContent = msg;
-            faceError.classList.remove('hidden');
-            if (faceStatusDot) {
-                faceStatusDot.className = 'w-2 h-2 rounded-full bg-rose-500 animate-pulse';
-            }
-        }
-
-        function hideFaceError() {
-            faceError.classList.add('hidden');
-            if (faceStatusDot) {
-                faceStatusDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
-            }
-        }
-
-        async function fetchFaceStatus() {
-            try {
-                const res = await fetch(`${API_URL}/auth/face-status`);
-                if (res.ok) {
-                    const data = await res.json();
-                    registeredFaceData = data;
-                    if (data.enrolled) {
-                        if (faceStatusBadge) {
-                            faceStatusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span> Face ID faol (${data.username})`;
-                            faceStatusBadge.className = 'text-[11px] text-emerald-400 font-medium flex items-center gap-1.5';
-                        }
-                        const headerDot = document.getElementById('headerFaceDot');
-                        if (headerDot) headerDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
-                    } else {
-                        if (faceStatusBadge) {
-                            faceStatusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span> Face ID o'rnatilmagan`;
-                            faceStatusBadge.className = 'text-[11px] text-amber-400 font-medium flex items-center gap-1.5';
-                        }
-                        const headerDot = document.getElementById('headerFaceDot');
-                        if (headerDot) headerDot.className = 'w-2 h-2 rounded-full bg-amber-400';
-                    }
-                }
-            } catch(e) {}
-        }
-
-        async function startFaceCamera() {
-            try {
-                faceStatus.textContent = 'Kamera faollashtirilmoqda...';
-                faceStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-                    audio: false
-                });
-                faceVideo.srcObject = faceStream;
-                await faceVideo.play();
-                faceStatus.textContent = faceMode === 'register' 
-                    ? 'Yuzingizni doiraga to\'g\'rilang va suratga oling' 
-                    : 'Yuzingizni skanerga to\'g\'rilang...';
-                faceCaptureBtn.disabled = false;
-                
-                if (faceMode === 'login' && autoScan) {
-                    startAutoScan();
-                }
-            } catch (err) {
-                console.error("Camera error:", err);
-                faceStatus.textContent = 'Kamera ochilmadi.';
-                showFaceError('Kameraga ruxsat berilmadi yoki veb-kamera topilmadi.');
-                faceCaptureBtn.disabled = true;
-            }
-        }
-
-        function stopFaceCamera() {
-            stopAutoScan();
-            if (faceStream) {
-                faceStream.getTracks().forEach(t => t.stop());
-                faceStream = null;
-            }
-            faceVideo.srcObject = null;
-        }
-
-        function captureFrame() {
-            const w = faceVideo.videoWidth || 640;
-            const h = faceVideo.videoHeight || 480;
-            faceCanvas.width = w;
-            faceCanvas.height = h;
-            const ctx = faceCanvas.getContext('2d');
-            ctx.translate(w, 0);
-            ctx.scale(-1, 1);
-            ctx.drawImage(faceVideo, 0, 0, w, h);
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
-            return faceCanvas.toDataURL('image/jpeg', 0.88);
-        }
-
-        function startAutoScan() {
-            stopAutoScan();
-            autoScanTimer = setInterval(() => {
-                if (faceMode === 'login' && faceStream && !isProcessingFace && !faceModal.classList.contains('hidden')) {
-                    executeFaceScan(true);
-                }
-            }, 1600);
-        }
-
-        function stopAutoScan() {
-            if (autoScanTimer) {
-                clearInterval(autoScanTimer);
-                autoScanTimer = null;
-            }
-        }
-
-        function setFaceMode(mode) {
-            faceMode = mode;
-            hideFaceError();
-            if (mode === 'register') {
-                faceModalTitle.textContent = 'Yuzni Ro\'yxatdan O\'tkazish';
-                faceModalSubtitle.textContent = 'Yuzingizni to\'liq va yorug\' joyda saqlang';
-                faceCaptureBtnText.textContent = 'Yuzni Saqlash';
-                faceModeBtn.innerHTML = '<i class="fa-solid fa-arrow-left mr-1"></i> Yuz Orqali Kirishga Qaytish';
-                // Show auth credentials if not logged in
-                const isLoggedIn = !!localStorage.getItem('admin_token');
-                if (!isLoggedIn) {
-                    faceRegisterAuthFields.classList.remove('hidden');
-                } else {
-                    faceRegisterAuthFields.classList.add('hidden');
-                }
-                stopAutoScan();
-            } else if (mode === 'test') {
-                faceModalTitle.textContent = 'Face ID Sinovi';
-                faceModalSubtitle.textContent = 'Kameraga qarab yuzingizni tekshirib ko\'ring';
-                faceCaptureBtnText.textContent = 'Yuzni Tekshirish';
-                faceModeBtn.innerHTML = '<i class="fa-solid fa-xmark mr-1"></i> Bekor Qilish';
-                faceRegisterAuthFields.classList.add('hidden');
-                if (autoScan) startAutoScan();
-            } else {
-                faceMode = 'login';
-                faceModalTitle.textContent = 'Face ID Bilan Kirish';
-                faceModalSubtitle.textContent = 'Yuzingizni skanerlash ramkasiga to\'g\'rilang';
-                faceCaptureBtnText.textContent = 'Skanerlash va Kirish';
-                faceModeBtn.innerHTML = '<i class="fa-solid fa-user-plus mr-1"></i> Yangi Yuzni Ro\'yxatdan O\'tkazish';
-                faceRegisterAuthFields.classList.add('hidden');
-                if (autoScan) startAutoScan();
-            }
-        }
-
-        async function executeFaceScan(isAuto = false) {
-            if (isProcessingFace) return;
-            isProcessingFace = true;
-            if (!isAuto) hideFaceError();
-
-            const dataUrl = captureFrame();
-            faceStatus.textContent = 'Yuz tahlil qilinmoqda...';
-            if (faceStatusDot) faceStatusDot.className = 'w-2 h-2 rounded-full bg-cyan-400 animate-ping';
-
-            try {
-                if (faceMode === 'register') {
-                    const username = document.getElementById('faceRegUsername')?.value || 'admin';
-                    const password = document.getElementById('faceRegPassword')?.value || 'admin123';
-
-                    const res = await fetch(`${API_URL}/auth/face-register`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include',
-                        body: JSON.stringify({
-                            image: dataUrl,
-                            username: username,
-                            password: password
-                        })
-                    });
-                    const data = await res.json();
-                    if (res.ok && data.status === 'success') {
-                        playFaceSuccessChime();
-                        faceStatus.textContent = 'Yuz muvaffaqiyatli saqlandi!';
-                        if (faceStatusDot) faceStatusDot.className = 'w-2 h-2 rounded-full bg-emerald-400';
-                        setTimeout(() => {
-                            stopFaceCamera();
-                            faceModal.classList.add('hidden');
-                            fetchFaceStatus();
-                            alert("✅ Face ID muvaffaqiyatli ro'yxatdan o'tkazildi! Endi yuzingiz orqali bir zumda kirishingiz mumkin.");
-                        }, 500);
-                    } else {
-                        faceStatus.textContent = 'Saqlashda xatolik';
-                        showFaceError(data.detail || 'Yuz aniqlanmadi yoki ruxsat berilmadi.');
-                    }
-                } else {
-                    // Login or Test mode
-                    const res = await fetch(`${API_URL}/auth/face-login`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include',
-                        body: JSON.stringify({ image: dataUrl })
-                    });
-                    const data = await res.json();
-                    if (res.ok && data.status === 'success') {
-                        playFaceSuccessChime();
-                        faceStatus.textContent = `Salom, ${data.full_name || data.username}!`;
-                        if (faceStatusDot) faceStatusDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-bounce';
-
-                        if (faceMode === 'test') {
-                            setTimeout(() => {
-                                stopFaceCamera();
-                                faceModal.classList.add('hidden');
-                                alert(`✅ Face ID tasdiqlandi! Moslik darajasi: ${data.similarity || 98}%`);
-                            }, 700);
-                        } else {
-                            if (data.token) localStorage.setItem('admin_token', data.token);
-                            setTimeout(() => {
-                                stopFaceCamera();
-                                faceModal.classList.add('hidden');
-                                document.getElementById('loginModal').classList.add('hidden');
-                                document.getElementById('appContainer').classList.remove('hidden');
-                                loadDashboard();
-                                fetchFaceStatus();
-                            }, 500);
-                        }
-                    } else {
         async function handleLogout() {
             localStorage.removeItem('admin_token');
             await fetch(`${API_URL}/auth/logout`, { method: 'POST', credentials: 'include' });
@@ -754,7 +482,7 @@
             if (btnIcon) btnIcon.classList.add('fa-spin');
             
             try {
-                const activeTab = document.querySelector('.tab-btn.active').id.replace('tab-', '');
+                const activeTab = document.querySelector('.tab-btn.active')?.id?.replace('tab-', '') || 'dashboard';
                 if(activeTab === 'dashboard') await loadDashboard();
                 if(activeTab === 'users') await loadUsers();
             } catch (err) {
@@ -766,12 +494,27 @@
 
         async function loadDashboard() {
             try {
-                const res = await fetch('https://maklersizkvartira-production.up.railway.app/api/v1/admin/stats');
-                if(res.ok) {
+                const token = localStorage.getItem('admin_token');
+                const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+                // 1. First try Maklersizuy.Admin backend endpoint
+                let res = await fetch(`${API_URL}/dashboard/stats`, { credentials: 'include', headers });
+                if (res.ok) {
+                    const data = await res.json();
+                    animateValue('valTotalUsers', data.total_registered_users || data.daily_visitors || 0);
+                    animateValue('valUsersWithListings', data.users_with_listings || data.total_owners || 0);
+                    animateValue('valGuestVisitors', data.today_guest_visitors || data.active_owners || 0);
+                    animateValue('valAiRequests', data.shield_ai_daily_requests || data.ai_auto_approved || 0);
+                    return;
+                }
+
+                // 2. Fallback to Railway API if token available
+                res = await fetch('https://maklersizkvartira-production.up.railway.app/api/v1/admin/stats', { headers });
+                if (res.ok) {
                     const response = await res.json();
                     if (response.status === 'success' && response.data) {
                         const data = response.data;
-                        animateValue('valTotalUsers', data.tenants || 0);
+                        animateValue('valTotalUsers', data.totalUsers || data.tenants || 0);
                         animateValue('valUsersWithListings', data.owners || 0);
                         animateValue('valGuestVisitors', data.guests || 0);
                         animateValue('valAiRequests', data.aiQueries || 0);
@@ -784,8 +527,23 @@
 
         async function loadUsers() {
             try {
-                const res = await fetch('https://maklersizkvartira-production.up.railway.app/api/v1/admin/users');
-                if(res.ok) {
+                const token = localStorage.getItem('admin_token');
+                const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+                let res = await fetch(`${API_URL}/users`, { credentials: 'include', headers });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data)) {
+                        renderUsersTable(data);
+                        return;
+                    } else if (data.data && Array.isArray(data.data)) {
+                        renderUsersTable(data.data);
+                        return;
+                    }
+                }
+
+                res = await fetch('https://maklersizkvartira-production.up.railway.app/api/v1/admin/users', { headers });
+                if (res.ok) {
                     const response = await res.json();
                     if (response.status === 'success' && response.data) {
                         renderUsersTable(response.data);
