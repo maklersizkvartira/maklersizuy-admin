@@ -493,12 +493,12 @@
         }
 
         async function loadDashboard() {
-            try {
-                const token = localStorage.getItem('admin_token');
-                const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+            const token = localStorage.getItem('admin_token');
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
-                // 1. First try Maklersizuy.Admin backend endpoint
-                let res = await fetch(`${API_URL}/dashboard/stats`, { credentials: 'include', headers });
+            // 1. First try Maklersizuy.Admin backend endpoint
+            try {
+                const res = await fetch(`${API_URL}/dashboard/stats`, { credentials: 'include', headers });
                 if (res.ok) {
                     const data = await res.json();
                     animateValue('valTotalUsers', data.total_registered_users || data.daily_visitors || 0);
@@ -507,9 +507,19 @@
                     animateValue('valAiRequests', data.shield_ai_daily_requests || data.ai_auto_approved || 0);
                     return;
                 }
+                if (res.status === 401) {
+                    localStorage.removeItem('admin_token');
+                    document.getElementById('loginModal').classList.remove('hidden');
+                    document.getElementById('appContainer').classList.add('hidden');
+                    return;
+                }
+            } catch (err) {
+                console.warn("Local dashboard/stats not available, falling back to Railway:", err);
+            }
 
-                // 2. Fallback to Railway API if token available
-                res = await fetch('https://maklersizkvartira-production.up.railway.app/api/v1/admin/stats', { headers });
+            // 2. Fallback to Railway API if available
+            try {
+                const res = await fetch('https://maklersizkvartira-production.up.railway.app/api/v1/admin/stats', { headers });
                 if (res.ok) {
                     const response = await res.json();
                     if (response.status === 'success' && response.data) {
@@ -521,16 +531,16 @@
                     }
                 }
             } catch (err) {
-                console.error("Dashboard error:", err);
+                console.warn("Railway stats fetch error:", err);
             }
         }
 
         async function loadUsers() {
-            try {
-                const token = localStorage.getItem('admin_token');
-                const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+            const token = localStorage.getItem('admin_token');
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
-                let res = await fetch(`${API_URL}/users`, { credentials: 'include', headers });
+            try {
+                const res = await fetch(`${API_URL}/users`, { credentials: 'include', headers });
                 if (res.ok) {
                     const data = await res.json();
                     if (Array.isArray(data)) {
@@ -541,8 +551,18 @@
                         return;
                     }
                 }
+                if (res.status === 401) {
+                    localStorage.removeItem('admin_token');
+                    document.getElementById('loginModal').classList.remove('hidden');
+                    document.getElementById('appContainer').classList.add('hidden');
+                    return;
+                }
+            } catch (err) {
+                console.warn("Local users endpoint not available:", err);
+            }
 
-                res = await fetch('https://maklersizkvartira-production.up.railway.app/api/v1/admin/users', { headers });
+            try {
+                const res = await fetch('https://maklersizkvartira-production.up.railway.app/api/v1/admin/users', { headers });
                 if (res.ok) {
                     const response = await res.json();
                     if (response.status === 'success' && response.data) {
@@ -550,7 +570,7 @@
                     }
                 }
             } catch (err) {
-                console.error("Users error:", err);
+                console.warn("Railway users fetch error:", err);
             }
         }
 
@@ -632,19 +652,24 @@
             const savedToken = localStorage.getItem('admin_token');
             let authed = false;
             try {
-                const r = await fetch(`${API_URL}/auth/me`, { credentials: 'include' });
-                if (r.ok) authed = true;
-            } catch(e) {}
-
-            if (!authed && savedToken) {
-                // Token exists in localStorage — trust it (user logged in before)
-                authed = true;
+                const headers = savedToken ? { 'Authorization': `Bearer ${savedToken}` } : {};
+                const r = await fetch(`${API_URL}/auth/me`, { credentials: 'include', headers });
+                if (r.ok) {
+                    authed = true;
+                } else if (r.status === 401) {
+                    localStorage.removeItem('admin_token');
+                }
+            } catch(e) {
+                console.warn("Init auth check error:", e);
             }
 
             if (authed) {
                 document.getElementById('loginModal').classList.add('hidden');
                 document.getElementById('appContainer').classList.remove('hidden');
                 loadDashboard();
+            } else {
+                document.getElementById('loginModal').classList.remove('hidden');
+                document.getElementById('appContainer').classList.add('hidden');
             }
         })();
     </script>
