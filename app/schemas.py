@@ -12,13 +12,6 @@ class LoginResponse(BaseModel):
     username: str
     full_name: str
 
-class FaceLoginRequest(BaseModel):
-    image: str
-
-class FaceRegisterRequest(BaseModel):
-    image: str
-    username: Optional[str] = None
-    password: Optional[str] = None
 
 class UserCreate(BaseModel):
     full_name: str
